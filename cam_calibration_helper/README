@@ -1,0 +1,15 @@
+
+
+	Camera calibration helper tool that prints the coordinates of the selected points in camera space for 
+			determining the camera-space to world-space mapping.
+
+Compilation
+===========
+
+	g++ -o main main.cpp -g -O0 -Wall  `pkg-config --cflags --libs opencv`
+
+Usage
+=====
+	./main
+
+	The results are stored in the calibration_points.txt.

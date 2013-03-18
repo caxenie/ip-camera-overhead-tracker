@@ -1,0 +1,98 @@
+
+
+	Overhead robot tracking for ground truth data extraction
+
+Basic Installation
+==================
+
+The simplest way to compile this package is:
+	 1. unpack `tar -xvf overhead-tracker-0.1.tar.gz'.
+	 2. `cd' to the directory containing the package's source code.
+	 3. Type `make all' to compile the package.
+	 4. You can remove the program binaries and object files from the
+     	    source code directory by typing `make clean'.
+
+Prerequisites, Compilers and Options
+====================================
+
+	1. OpenCV (>=2.3.1)
+	2. g++
+	3. pkg-config
+
+Usage
+=====
+	After compiling the source code there are many options:
+
+	1. Record a stream to a file stored on the disk.
+
+		./cam_track -r <input_stream>
+
+			where <input_stream> can be:
+				-  remote stream (RTSP)
+				-  file on disk 
+			        -  default option for running without args: local camera
+
+		e.g.: 
+			./cam_track -r 					# record stream from local camera (i.e.: laptop webcam)
+			./cam_track -r rtsp://192.168.1.3/live/h264	# record RTSP stream from IP Cam 1 (Pointing perpendicular on the ground)
+			./cam_track -r rtsp://192.168.2.3/live/h264	# record RTSP stream from IP Cam 2 (Pointing ~45' on the hallway)
+
+	2. Run the tracking algorithm on an input stream (using 2 coloured markers : small radius red+blue circles). 
+
+		./cam_track <input_stream>
+
+		e.g.:
+			./cam_track  					# run the tracking algorithm on local camera stream (i.e.: laptop webcam)
+			./cam_track rtsp://192.168.1.3/live/h264	# run the tracking algorithm on RTSP stream from IP Cam 1 (i.e. Pointing perpendicular on the ground)
+			./cam_track demo/CAM-TRACK-Rec1.avi		# run the tracking algorithm on a locally saved file (i.e.: demo recording in the demo directory, old runs)
+
+	Sample algorithm off-line testing:
+		
+		- run the prerecorded stream:
+
+			./cam_track demo/CAM-TRACK-Rec1.avi
+			
+	Sample algorithm on-line usage:
+
+		- ensure lights are all on in the hallway because marker detection is sensitive to illumination;
+		- the occlusions are not treated in case of using the ~45' oriented camera (i.e.: CAM 2);
+		- the data from running the algorithm and also the recorded stream for off-line processing will be saved in the current directory (source directory);
+		- the recorded file will be an MPEG-4 encoded .AVI file at 30FPS using a hardcoded identifier CAM-TRACK-Rec.avi;
+		- the logged data during the algorithm execution will be saved in the CAM-TRACK_Log.txt file;
+				- the tracking can be observed during runtime by getting the pose information in world space, camera space and heading and also the robot trace;
+				- the format is given as:
+					X_POS,Y_POS,HEADING,OS_TIMESTAMP(H:M:S:mS).
+
+Camera connection setup
+=======================
+
+	There are 2 possibilities to connect to the overhead cameras.
+
+	1. Connect one of the cameras to the laptop directly using the cable.
+		- CAM1 : pointing 90' on the floor has the static IP address 192.168.1.3		
+		- CAM2 : pointing 45' on the floor has the static IP address 192.168.2.3
+		- each camera has also its own http interface to control the stream parameters or network access, just e.g. http://192.168.1.3 and use admin/admin as login (FIXME!)
+
+	2. Connect the cameras to the linksys router on top of 3018-2 machine in the student room and access the cam remotely (with speed penalty)
+		- the router has the IP addess 192.168.1.1 and the access token is ttfc-cs08-q8qu
+
+
+Other
+=====
+
+	The source directory also contains a camera calibration helper. 
+		- This code prints the coordinates of the selected points in camera space for helping in determining the camera-space to world-space mapping.
+		- compile the code with:
+
+					g++ -o main main.cpp -g -O0 -Wall  `pkg-config --cflags --libs opencv`
+
+		- the selected points coordinates are in:
+
+					calibration_points.txt
+
+
+Changelog
+=========
+
+Cristian Axenie (cristian.axenie@tum.de) 2012.03.14
+- Added version 0.1 for Linux OS
