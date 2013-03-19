@@ -19,7 +19,7 @@ int main(int argc, char* argv[]){
 		exit(EXIT_FAILURE);
 	}
 	/* separate thread to handle the incomming connections */
-//	pthread_t conn_handler;
+	pthread_t conn_handler;
 	/* ret code when creating thread */
 	int rc;
 	/* one time init switch for markers search and setup */
@@ -30,14 +30,14 @@ int main(int argc, char* argv[]){
 	
 	/* init log data support */
 	log_file = (struct robot_data_log*)calloc(MAX_LOG_SIZE, sizeof(struct robot_data_log));
-/*	
+	
 	// start remote log data sending thread 
 	if ((rc = pthread_create(&conn_handler, NULL, remote_connections_handler, NULL))) {
-      printf("main: pthread_create, rc: %d\n", rc);
-    }
+   		printf("main: pthread_create, rc: %d\n", rc);
+        }
 
-	pthread_detach(conn_handler);
-*/	
+//	pthread_detach(conn_handler);
+
 	/* init font system for coordinate display */
 	cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.7, 0.7, 0.5, 1, 8);
 	
@@ -124,16 +124,8 @@ int main(int argc, char* argv[]){
 					/* if already detected track the markers */
 					track_main_marker();
 					track_aux_marker();
-				/* get current frame time */
-	                        if(clock_gettime(CLOCK_REALTIME, &tcur)==-1){
-        	                        printf("Cannot access time subsystem.");
-                	                break;
-                        	}
-	                        /* compute the timestamp */
-        	                log_file[idx].timestamp = compute_dt(&tcur, &tstart);
-				/* write to log file and redisplay debug output */
-				present_data();
-
+					/* write to log file and redisplay debug output */
+					present_data();
 				}
 			}
 			/* update images */
@@ -144,14 +136,16 @@ int main(int argc, char* argv[]){
 		/* check if end stream is sent */
 		if((int)cvWaitKey(2) == 'q') break; 
 	}
+	
+        /* join broadcast thread */
+        pthread_join(conn_handler , NULL);
+
+	
 	/* dump log data */
 	if(dump_log_file(log_file, idx)!=0){
 		printf("Cannot dump file, restart experiment.");
 	}
 	
-/*	
-	pthread_join(conn_handler , NULL);
-*/	
 	/* free the allocated memory*/
 	if(capture)
 		cvReleaseCapture(&capture);

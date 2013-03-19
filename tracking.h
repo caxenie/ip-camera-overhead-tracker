@@ -27,6 +27,8 @@
 #include <poll.h>
 #include <limits.h>
 #include <semaphore.h> 
+#include <stdlib.h>
+
 
 #define MARKER_SIZE 		10		/* the object markers size */	
 #define SEARCH_SPACE_SIZE   65		/* search space window size for template matching */
@@ -34,9 +36,10 @@
 #define CONVERSION_FACTOR_X	0.3266	/* cam space to world space mapping value for X axis */
 #define CONVERSION_FACTOR_Y	0.3251	/* cam space to world space mapping value for Y axis */
 #define MAXBUF				50 	   	/* max buffer length for data sending */
-#define PORT_NUM 			56000	/* port number exposed by the server */
+#define PORT 			"56000"	/* port number exposed by the server */
+#define BACKLOG 		 20     // how many pending connections queue will hold
 #define TIME_SIZE 			40		/* max time stamp string size */
-#define MAX_LOG_SIZE 		1000
+#define MAX_LOG_SIZE 		9999
 #define VERBOSE						/* get markers, trace and additional info */
 
 // #define AUTO_FIND_MARKERS		/* detects markers automatically - not stable */
@@ -80,210 +83,119 @@ short init = 0;
 /* data buffer to store tracking history */
 char buffer[MAXBUF];
 /* lock for writing the data to the buffer */
-//pthread_mutex_t buff_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t buff_lock = PTHREAD_MUTEX_INITIALIZER;
 /* ok to send flag */
 short on_send = 0;
 
-/**
- * Initialize remote access setup using sockets
- */
-int init_remote_access(){
-	/* socket filedes of the server */
-	int sockfd = 0;
-	/* server socket information */
-	struct sockaddr_in self;
-	/* option value access var */
-	int tr=1;
-	int sock_buf_size = 100000;
-	
-	/* create streaming socket */
-    if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		printf("init_remote_access: error creating socket!\n");
-		perror("Socket");
-		exit(errno);
-	}
-	
-	/* set socket to non-blocking */
-	fcntl(sockfd, F_SETFL, O_NONBLOCK);  
-	/* set socket to asynchronous I/O */
-	fcntl(sockfd, F_SETFL, O_ASYNC);     
- 
-	/* initialize address/port structure */
-	bzero(&self, sizeof(self));
-	self.sin_family = AF_INET;
-	self.sin_port = htons(PORT_NUM);
-	self.sin_addr.s_addr = INADDR_ANY;
-
-	/* set socket updated opts */
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,&tr,sizeof(int)) == -1) {
-		/* allow address reuse */
-		printf("init_remote_access: error setting addr reuse socket option!\n");
-		perror("setsockopt");
-	}
-	
-	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char *)&sock_buf_size, sizeof(sock_buf_size)) == -1) {
-		/* allow bigger send buffer */
-		printf("init_remote_access: error setting buff len socket option!\n");
-		perror("setsockopt");
-	}	
-
-	/* assign a port number to the socket */
-    if ( bind(sockfd, (struct sockaddr*)&self, sizeof(self)) != 0 )
-	{
-		printf("init_remote_access: bind error!\n");
-		perror("socket--bind");
-		exit(errno);
-	}
-
-	/* make it a listening socket */
-	if ( listen(sockfd, 20) != 0 )
-	{
-		printf("init_remote_access: listen error!\n");
-		perror("socket--listen");
-		exit(errno);
-	}	
-	return sockfd;
+void sigchld_handler(int s)
+{
+    while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-/**
- * Accepts incoming connection and sends the tracking 
- * data over the network
- */
-void send_tracking_data(int clientfd){
-			/* send tracking data */
-			send(clientfd, buffer, sizeof(buffer), MSG_DONTWAIT | MSG_MORE);
-			usleep(1000);/* us */
+// get sockaddr, IPv4 or IPv6:
+void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-/**
- * Close connection when tracking finished
- */
-void close_remote_access(int clientfd, int sockfd){
-			/* close data connection */
-			close(clientfd);
-			/* clean up (should never get here!) */
-			close(sockfd);
-}
-
-/** 
- * Return accepted socket or -1 to avoid blocking and waiting. 
- * If timeout is 0, wait without timeout 
- */
-int accept_and_noblock(int timeout, int sockfd){
-	/* connected client file descriptor */
-	int clientfd = 0;
-	/* client information */
-	struct sockaddr_in client_addr;
-	/* client address size */
-	int addrlen=sizeof(client_addr);
-	/* timeval struct to store timing information */
-    struct timeval tmo;
-	/* RW fildes for synchronous I/O multiplexing */
-    fd_set fds, efds;
-	
-	/* timeout in seconds */
-    tmo.tv_sec = timeout; 
-    tmo.tv_usec = 1;
-
-	/* multiplex sockets in the single-threaded environment*/
-     FD_ZERO(&fds); 
-	 FD_SET(sockfd,&fds); 
-	 FD_ZERO(&efds); 
-	 FD_SET(sockfd,&efds);
-	 
-	 /* FIXME: it seems that select() fails sometimes due to the
-	  * use of FD_* family macros when settign bit arrays for
-	  * fd_sets. This is a well known problem in a multithreaded
-	  * environment using sockets. The alternative is using the
-	  * poll() function which is not limited to a FD_SIZE of 1024
-	  * so we can have fds bigger than the limit. 
-	  * A workaround here is using local vars to store and pass
-	  * as function args instead of using global (shared) vars for
-	  * communication parameters.
-	  */
-	  
-#if 0
-	struct pollfd fds[2]; 
-	fds[0].fd = sockfd;
-	fds[0].events= POLLIN | POLLPRI;
-	
-	fds[1].fd = sockfd;
-	fds[1].events= POLLOUT | POLLPRI;
-#endif	
-
-	/* check sockets for R/W or pending operations before timeout expires */
-    if(select (sockfd+1,&fds,NULL,&efds, timeout ? &tmo:(struct timeval *)0)){
-		
-#if 0
-	if (timeout > INT_MAX)
-        {
-            /* Sorry poll only takes int */
-            timeout = INT_MAX;
-
-        }
-	int rc = 0;
-	if((rc = poll(fds, 2, timeout))>0){		
-		if (fds[1].revents & POLLOUT) {
-#endif
-
-	  /* check if we have a client wanting to connect and if any return its file descriptor */
-      if((clientfd = accept(sockfd,(struct sockaddr*)&client_addr,(socklen_t *)&addrlen))>0){
-        return(clientfd);
-	  }
-	  
-#if 0
-	}
-   }else{
-	   if(rc==-1)
-			printf("ERROR \n");
-	   else 
-		   printf("TIMEOUT\n");
-   }
-#endif
-
-	} /* end select() */
-   return(-1);
-} 
 
 /**
  * Separate thread to accept socket connections
  * for sending the tracking data to a remote
  * machine
  */
-void *remote_connections_handler(void *in){
-	/* init remote broadcast of tracking data */
-	/* get server socket and setup communication parameters */
-	int srv = init_remote_access();
-	/* init client filedes */
-	int cl = 0;
-	/* flag to mark that a client is connected */
-	short cl_on = 0;
-	/* wait for connections */
-	while(1){
-			/* check if any clients want to connect */
-			if((cl = accept_and_noblock(1, srv))<0 && cl_on == 0){
-			}
-			else{
-				cl_on = 1;
-			}
-			/* if a client connected send tracking data to it */
-			if(cl_on){
-					while(1){
-						/* sync to tracker data write */
-						if(on_send==1){
-						/* send data to client */
-						send_tracking_data(cl);
-						/* reset sync flag */
-						on_send = 0;
-						}
-					 }
-			}
-		/* if we don't have input stop */
-		if(image==NULL) break;
-	}
-	/* close socket for remote broadcast */
-	close_remote_access(cl, srv);
+void * remote_connections_handler(void *data){
+	 int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+    struct addrinfo hints, *servinfo, *p;
+    struct sockaddr_storage their_addr; // connector's address information
+    socklen_t sin_size;
+    struct sigaction sa;
+    int yes=1;
+    char s[INET6_ADDRSTRLEN];
+    int rv;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE; // use my IP
+
+    if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        return NULL;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+        if ((sockfd = socket(p->ai_family, p->ai_socktype,
+                p->ai_protocol)) == -1) {
+            perror("server: socket");
+            continue;
+        }
+
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+                sizeof(int)) == -1) {
+            perror("setsockopt");
+            exit(1);
+        }
+
+        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(sockfd);
+            perror("server: bind");
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == NULL)  {
+        fprintf(stderr, "server: failed to bind\n");
+        return NULL;
+    }
+
+    freeaddrinfo(servinfo); // all done with this structure
+
+    if (listen(sockfd, BACKLOG) == -1) {
+        perror("listen");
+        exit(1);
+    }
+
+    sa.sa_handler = sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
+    while(1) {  // main accept() loop
+        sin_size = sizeof their_addr;
+        new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+        if (new_fd == -1) {
+            perror("accept");
+            continue;
+        }
+
+        inet_ntop(their_addr.ss_family,
+            get_in_addr((struct sockaddr *)&their_addr),
+            s, sizeof s);
+
+        //if (!fork()) { // this is the child process
+        //    close(sockfd); // child doesn't need the listener
+            while(1){
+		//if(on_send==1){
+			if (send(new_fd, buffer, sizeof(buffer), 0) == -1)
+                	perror("send");
+		//on_send=0;
+		//}
+	    }
+        //}
+        //close(new_fd);  // parent doesn't need this
+  //  }	
+  }
 	return NULL;
 }
 
@@ -615,23 +527,25 @@ void present_data(){
 			init_fix = 1;
 		}
 	/* update log data: X,Y,theta,timestamp */
+        /* get current frame time */
+        if(clock_gettime(CLOCK_REALTIME, &tcur)==-1){
+                   printf("Cannot access time subsystem.");
+        }
+        /* compute the timestamp */
+        log_file[idx].timestamp = compute_dt(&tcur, &tstart);
 	log_file[idx].xpos = X;
 	log_file[idx].ypos = Y;
 	log_file[idx].heading = theta;
 	log_file[idx].sample = idx;
-
-	//fprintf(f,"%f,%f,%f,%s\n", X, Y, theta, insert_timestamp());
-
-	//if(idx%15==0){
+	//if(idx%5==0){
 			/* sync to socket send */
-			on_send = 1;
+	//		on_send = 1;
 			/* lock buffer for writing */
-//			pthread_mutex_lock(&buff_lock);
+	//		pthread_mutex_lock(&buff_lock);
 			/*prepare buffer to be sent to remote connections in the second thread */;
-			//sprintf(buffer, "%f,%f,%f,%s\n", X, Y, theta, insert_timestamp());
-			sprintf(buffer, "%f,%f,%f,%d\n", X, Y, theta, idx);
+			sprintf(buffer, "%f,%f,%f,%d,%lf\n", X, Y, theta, idx, log_file[idx].timestamp);
 			/* unlock buffer */
-//			pthread_mutex_unlock(&buff_lock);
+	//		pthread_mutex_unlock(&buff_lock);
 	//}
 	/* update position in the frame */
 	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, x_pos, y_pos, theta);
@@ -655,7 +569,7 @@ void present_data(){
 	y_pos_ant_vis = y_pos;
 #endif		
 	/* timed update history for tracking */
-	if(idx%100==0){
+	if(idx%10==0){
 		x_pos_ant = x_pos;
 		y_pos_ant = y_pos;
 		x_pos_ant0 = x_pos0;

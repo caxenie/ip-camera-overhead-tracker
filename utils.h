@@ -145,9 +145,9 @@ int* get_stream_properties(CvCapture *c)
 	                 CV_CAP_PROP_FPS)	;						/* FPS */
 	stream_prop[3] = (int)cvGetCaptureProperty(c, 			    /* capture */
 	                 CV_CAP_PROP_FOURCC);				        /* 4-character code of codec */
-	printf("get_stream_properties: WxH CODEC @ FPS: %d x %d %d @ %d\n",stream_prop[1], stream_prop[0], stream_prop[3], stream_prop[2]);
+//	printf("get_stream_properties: WxH CODEC @ FPS: %d x %d %d @ %d\n",stream_prop[1], stream_prop[0], stream_prop[3], stream_prop[2]);
 #else
-	printf("get_stream_properties: WxH %d x %d\n", stream_prop[1], stream_prop[0]);
+//	printf("get_stream_properties: WxH %d x %d\n", stream_prop[1], stream_prop[0]);
 #endif
 	return stream_prop;
 }
