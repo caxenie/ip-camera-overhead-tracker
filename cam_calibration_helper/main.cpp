@@ -43,11 +43,11 @@ CvCapture* get_source(CvCapture *c, int nr, char** in)
 		printf("get_source: capture from local cam\n");
 		/* capture from local cam */
 		c = cvCaptureFromCAM( nr==2 ? in[1][0] - '0' : 0);
-	} else if( strstr(in[1],"rtsp")!=NULL && nr == 2 ) {
+	} else if( ((strstr(in[1],"rtsp")!=NULL) || (strstr(in[1],"http")!=NULL)) && (nr == 2) ) {
 		/* capture from remote cam */
 		printf("get_source: capture from remote cam\n");
 		c = cvCreateFileCapture(in[1]);
-	} else if( nr == 2 ) {
+	} else if( strstr(in[1],"avi")!=NULL && nr == 2 ) {
 		printf("get_source: capture from locally saved file\n");
 		/* capture from local sved file */
 		c = cvCaptureFromAVI( in[1] );
@@ -62,7 +62,7 @@ CvCapture* get_source(CvCapture *c, int nr, char** in)
 void select_point(int event, int x_coord, int y_coord, int flags, void* param)
 {
 	/* check the type of event that occured and filter desired event */
-	if(event == CV_EVENT_LBUTTONUP) {
+	if(event == CV_EVENT_LBUTTONDOWN) {
 		/* get the coord of the subimage */
 		x_pos = x_coord;
 		y_pos = y_coord;
@@ -86,7 +86,8 @@ void select_point(int event, int x_coord, int y_coord, int flags, void* param)
  */
 void mark_points()
 {
-
+	/* events are generated also when starting the display but we only consider user's clicks */
+	if(i>0){
 			/* draw an identification rectangle where a point was selected */
 			cvRectangle(markers_img,			/* image to draw in */
 			            cvPoint(x_pos-5, 
@@ -109,6 +110,7 @@ void mark_points()
 					  cvScalar(255, 255, 255, 0));  /* line properties */
 			/* overimpose over the current frames */
 			cvAdd(image,markers_img,image);
+	}
 } 
 
 /* entry point */
@@ -152,15 +154,11 @@ int main(int argc, char* argv[])
 		cvShowImage("Calibration helper", image);
 		
 		/* check if q is sent */
-		if((int)cvWaitKey(33) == 113) break; 
+		if((int)cvWaitKey('q') == 113) break; 
+		
 	}
 	/* free the allocated memory*/
 	cvReleaseCapture(&capture);
-	if(image)
-		cvReleaseImage(&image);
-	if(markers_img)
-		cvReleaseImage(&markers_img);
-	/* destroy window handlers */
 	cvDestroyWindow("Calibration helper");
 	return 0;
 }

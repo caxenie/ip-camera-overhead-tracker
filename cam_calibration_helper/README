@@ -3,13 +3,33 @@
 	Camera calibration helper tool that prints the coordinates of the selected points in camera space for 
 			determining the camera-space to world-space mapping.
 
-Compilation
-===========
+Select points in the stream rendering window and check the generated file. Using the measured world coordinates one can find the mapping value.
 
-	g++ -o main main.cpp -g -O0 -Wall  `pkg-config --cflags --libs opencv`
+Compilation & run
+==================
 
-Usage
-=====
-	./main
+	# compile
+	make
 
-	The results are stored in the calibration_points.txt.
+	# to clean the directory
+	make clean 
+
+	# run
+	make run
+
+General info
+============
+	# press q after selecting the points to finish the stream acquisition and dump coordintes to a file.
+
+	# run command line 
+	./calibration_helper <name_of_the_stream>
+
+	e.g.: for the Axis IP Cam in the robot room
+
+		# accessing the MJPEG (motion jpeg) stream
+		./calibration_helper http://10.162.242.18/mjpg/video.mjpg
+	
+		# accessing the H264 RTSP stream (do not use, problems on Linux)
+		./calibration_helper rtsp://10.162.242.18/axis-media/media.amp
+
+	The results are stored in the calibration-points.txt.

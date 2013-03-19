@@ -2,7 +2,7 @@
  * @author Cristian Axenie, cristian.axenie@tum.de
  * 
  * Simple tracking application using data streamed over RTSP 
- * from Logilink IP Cameras,local camera or locally saved file.
+ * from Axis IP Cam (Robot room / Holodeck), local camera or locally saved file.
  * The tracking algorithm will be used for mobile robot tracking in indoor operation.
  * 
  * Medium access utilities. 
@@ -12,6 +12,7 @@
 #define UTILS_H_
  
 #include <stdio.h>
+#include <time.h>
 #include "highgui.h"
 #include "cv.h"
 
@@ -20,6 +21,15 @@ enum{
 	REMOTE,
 	LOCAL,
 	DISK
+};
+
+/* robot data to be dumped on disk */
+struct robot_data_log{
+	double xpos;
+	double ypos;
+	double heading;
+	int sample;
+	double timestamp;
 };
 
 /* source type var */
@@ -32,8 +42,10 @@ IplImage* image = NULL;
 CvVideoWriter *recorder;
 /* flag to mark recording */
 short is_recording = 0;
-/* file to store tracking data */
-FILE *f;
+/* data log */
+struct robot_data_log *log_file;
+/* timer utils */
+struct timespec tstart, tcur;
 
 /** 
  * Initialize the stream recorder
@@ -100,7 +112,7 @@ CvCapture* get_source(CvCapture *c, int nr, char** in)
 		/* capture from local cam */
 		c = cvCaptureFromCAM( nr==2 ? in[1][0] - '0' : 0);
 		source = LOCAL;
-	} else if( strstr(in[1],"rtsp")!=NULL && nr == 2 ) {
+	} else if( strstr(in[1],"http")!=NULL && nr == 2 ) {
 		/* capture from remote cam */
 		printf("get_source: capture from remote cam\n");
 		c = cvCreateFileCapture(in[1]);
@@ -142,4 +154,50 @@ int* get_stream_properties(CvCapture *c)
 
 #endif
 
+/* dumps the memory saved log file to the disk */
+int dump_log_file(struct robot_data_log* buffer, int buffer_size)
+{
+    int i;
+    time_t rawtime;
+    struct tm * timeinfo;
+    char log_file_name [160];
+    FILE *f;
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );
+
+    strftime (log_file_name,80,"%Y-%m-%d__%H:%M:%S",timeinfo);
+    strcat(log_file_name,"_overhead_tracker_position" );
+
+    f = fopen(log_file_name, "w+");
+
+    if(f==NULL){
+        fprintf(stderr, "Cannot open log file!\n");
+        return 1;
+    }
+    for(i=0;i<buffer_size;i++){
+        fprintf(f, "%lf,%lf,%lf,%d,%lf\n", buffer[i].xpos, buffer[i].ypos, buffer[i].heading, buffer[i].sample, buffer[i].timestamp);
+    }
+    fclose(f);
+    return 0;
+}
+
+/* compute the time interval for the timestamp in ms */
+double compute_dt(struct timespec *end_time, struct timespec *start_time)
+{
+  struct timespec difference;
+
+  difference.tv_sec =end_time->tv_sec -start_time->tv_sec ;
+  difference.tv_nsec=end_time->tv_nsec-start_time->tv_nsec;
+
+  while(difference.tv_nsec<0)
+  {
+    difference.tv_nsec+=1000000000;
+    difference.tv_sec -=1;
+  }
+
+  return ((double)(1000.0*(double)difference.tv_sec+
+                   (double)difference.tv_nsec/1000000.0));
+
+}
 

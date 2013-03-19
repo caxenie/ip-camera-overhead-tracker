@@ -2,14 +2,11 @@
  * @author Cristian Axenie, cristian.axenie@tum.de
  * 
  * Simple tracking application using data streamed over RTSP 
- * from Logilink IP Cameras,local camera or locally saved file.
+ * from Axis IP Cam (Robot room / Holodeck) ,local camera or locally saved file.
  * The tracking algorithm will be used for mobile robot tracking in indoor operation.
  * 
  * Tracker functionality.
  */
-
-#ifndef TRACKING_H_
-#define TRACKING_H_
 
 #include <stdio.h>
 #include "highgui.h"
@@ -34,13 +31,15 @@
 #define MARKER_SIZE 		10		/* the object markers size */	
 #define SEARCH_SPACE_SIZE   65		/* search space window size for template matching */
 #define MATCHING_THRESHOLD  0.5		/* template matching threshold */	
-#define CONVERSION_FACTOR_X	0.27	/* cam space to world space mapping value for X axis */
-#define CONVERSION_FACTOR_Y	0.25	/* cam space to world space mapping value for Y axis */
+#define CONVERSION_FACTOR_X	0.3266	/* cam space to world space mapping value for X axis */
+#define CONVERSION_FACTOR_Y	0.3251	/* cam space to world space mapping value for Y axis */
 #define MAXBUF				50 	   	/* max buffer length for data sending */
 #define PORT_NUM 			56000	/* port number exposed by the server */
 #define TIME_SIZE 			40		/* max time stamp string size */
-
+#define MAX_LOG_SIZE 		1000
 #define VERBOSE						/* get markers, trace and additional info */
+
+// #define AUTO_FIND_MARKERS		/* detects markers automatically - not stable */
 
  /* image header that will save the tracked positions of the object */
 IplImage* obj_pos_img = NULL;
@@ -84,43 +83,6 @@ char buffer[MAXBUF];
 //pthread_mutex_t buff_lock = PTHREAD_MUTEX_INITIALIZER;
 /* ok to send flag */
 short on_send = 0;
-
-/**
- * Add a system time timestamp to the tracking information
- */
-char* insert_timestamp(){
-	/* only if file exists */
-	if(f!=NULL)
-	{
-		/* time keeping structure */
-		const struct tm *tm;
-		/* to extract also ms */
-		struct timeb tp;
-		/* get time with finer granularity */
-		ftime(&tp);
-		/* timestamp representation length */
-		size_t len;
-		/* store current time */
-		time_t now;
-		
-		/* allocate string to hold the timestamp */
-		char *s = (char*)calloc ( TIME_SIZE, sizeof (char) );
-		char *ms = (char*)calloc ( TIME_SIZE, sizeof (char) );
-		
-		/* get time */
-		now = time ( NULL );
-		/* get extensive representation of the time data */
-		tm = localtime ( &now );
-		/* convert to string representation and return it */
-		len = strftime ( s, TIME_SIZE, "%I:%M:%S", tm );
-		/* get ms */
-		sprintf(ms, ":%d", tp.millitm);
-		/* final string encoded timestamp */
-		strcat(s,ms);
-		return s;
-	}
-	return (char*)"-";
-}
 
 /**
  * Initialize remote access setup using sockets
@@ -325,6 +287,7 @@ void *remote_connections_handler(void *in){
 	return NULL;
 }
 
+#ifdef AUTO_FIND_MARKER
 /**
  * Searches the main marker in the camera frame.
  * Algorithm uses a modified Hough transform 
@@ -409,6 +372,49 @@ void search_aux_marker(){
 	cvReleaseImage(&hsv_frame0);
 	cvReleaseImage(&thresholded0);
 }
+#else
+
+/* Select main marker with the mouse */
+void select_point(int event, int x_coord, int y_coord, int flags, void *param)
+{
+	/* filter mouse selection event */
+	if(event == CV_EVENT_LBUTTONDOWN){
+	   /* select main marker */	
+	   if(main_is_on==0){
+		/* get the coordinate in the subimage and copy to global coord */
+	 	mx = x_coord;
+		my = y_coord;
+		/* setup a rectangular ROI */
+		cvSetImageROI(image,
+			     cvRect(mx,
+				    my,
+				    8,
+				    8)); 	
+		/* set flag for main loop */
+		main_is_on = 1;
+		cvResetImageROI(image);
+		return;
+	    }
+	    /* select aux marker */    	
+	    if(aux_is_on==0){
+		tx = x_coord;
+                ty = y_coord;
+                /* setup a rectangular ROI */
+                cvSetImageROI(image,
+                             cvRect(tx,
+                                    ty,
+                                    8,
+                                    8));
+                /* set flag for main loop */
+                aux_is_on = 1;
+		cvResetImageROI(image);
+		return;
+	    }
+	}
+}
+
+#endif
+
 
 /**
  * Object markers setup used for heading angle computation
@@ -608,12 +614,15 @@ void present_data(){
 			if(theta > 0.0f || theta < 0.0f) theta =0.0f;
 			init_fix = 1;
 		}
-	/* update log file: X,Y,theta,timestamp */
-	if(f!=NULL) 
-		//fprintf(f,"%f,%f,%f,%s\n", X, Y, theta, insert_timestamp());
-		fprintf(f, "%f,%f,%f,%d\n", X, Y, theta, idx);
+	/* update log data: X,Y,theta,timestamp */
+	log_file[idx].xpos = X;
+	log_file[idx].ypos = Y;
+	log_file[idx].heading = theta;
+	log_file[idx].sample = idx;
 
-	if(idx%15==0){
+	//fprintf(f,"%f,%f,%f,%s\n", X, Y, theta, insert_timestamp());
+
+	//if(idx%15==0){
 			/* sync to socket send */
 			on_send = 1;
 			/* lock buffer for writing */
@@ -623,7 +632,7 @@ void present_data(){
 			sprintf(buffer, "%f,%f,%f,%d\n", X, Y, theta, idx);
 			/* unlock buffer */
 //			pthread_mutex_unlock(&buff_lock);
-	}
+	//}
 	/* update position in the frame */
 	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, x_pos, y_pos, theta);
 			cvPutText(image, 														/* the image to write on */  
@@ -636,7 +645,7 @@ void present_data(){
 	if(x_pos_ant_vis>0 && y_pos_ant_vis>0) {
 		if(x_pos>0 && y_pos>0) {
 			/* create a tracking line marker between 2 succesive points while target is moving (object trace) */
-			cvLine(obj_pos_img, cvPoint(x_pos, y_pos), cvPoint(x_pos_ant_vis, y_pos_ant_vis), cvScalar(0,0,255), 1);
+	cvLine(obj_pos_img, cvPoint(x_pos, y_pos), cvPoint(x_pos_ant_vis, y_pos_ant_vis), cvScalar(0,0,255), 3);
 		}
 	}
 	cvAdd(image, obj_pos_img, image);
@@ -646,7 +655,7 @@ void present_data(){
 	y_pos_ant_vis = y_pos;
 #endif		
 	/* timed update history for tracking */
-	if(idx%450==0){
+	if(idx%100==0){
 		x_pos_ant = x_pos;
 		y_pos_ant = y_pos;
 		x_pos_ant0 = x_pos0;
@@ -656,4 +665,3 @@ void present_data(){
   }
 }
 
-#endif 
