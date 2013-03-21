@@ -44,7 +44,7 @@
  */
 struct tracker{
 	/* image header that will save the tracked positions of the object */
-	IplImage* obj_pos_img;
+	IplImage *obj_pos_img;
 	/* image headers that will contain templates and matching results */
 	IplImage *main_marker_mask_img;
 	IplImage *aux_marker_mask_img;

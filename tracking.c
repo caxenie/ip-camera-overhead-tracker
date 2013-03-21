@@ -303,7 +303,7 @@ void present_data(){
 	/* flag for clear initialization */
 	static int init_fix = 0;
 	/* GUI printed string */
-	static char pos_val[30];
+	char pos_val[200];
 	/* init coordinates */
 	if(obj->init==0){
 		X = 0.0f;
@@ -353,11 +353,13 @@ void present_data(){
 	
 	/* update position in the GUI */
 	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, obj->x_pos, obj->y_pos, theta);
+
 		cvPutText(frame_provider->image,				/* the image to write on */ 
 			  pos_val,  						/* the string to write */
 			  cvPoint(SEARCH_SPACE_SIZE, SEARCH_SPACE_SIZE),	/* where to place text box */
 			  &font, 						/* which font to use */
 			  cvScalar(255, 255, 255, 0)); 		 		/* line properties */
+
 #ifdef VERBOSE
 	/* superimpose the trace of the tracked object */
 	if(x_pos_ant_vis>0 && y_pos_ant_vis>0) {	
@@ -366,8 +368,9 @@ void present_data(){
 			cvLine(trk->obj_pos_img, cvPoint(obj->x_pos, obj->y_pos), cvPoint(x_pos_ant_vis, y_pos_ant_vis), cvScalar(0,0,255,0.0), 3, 8, 0);
 		}
 	}
-	cvAdd(frame_provider->image, trk->obj_pos_img, frame_provider->image, NULL);
 
+	cvAdd(frame_provider->image, trk->obj_pos_img, frame_provider->image, NULL);
+ 
 	/* update history for visualization */
 	x_pos_ant_vis = obj->x_pos;
 	y_pos_ant_vis = obj->y_pos;

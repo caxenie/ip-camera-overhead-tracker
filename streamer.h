@@ -29,6 +29,7 @@
 
 #define PORT 		"56000"	/* port number exposed by the server */
 #define BACKLOG 	20      /* how many pending connections queue will hold */
+#define STREAMER_ON	
 
 /**
  * Get client sockaddr for stream server 

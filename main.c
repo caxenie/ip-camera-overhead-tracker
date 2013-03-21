@@ -32,19 +32,10 @@ void init_application(){
 	log_bin = (struct data_log*)calloc(MAX_LOG_SIZE, sizeof(struct data_log));
 	/* init frame source */
 	frame_provider = (struct frame_accessor*)calloc(1, sizeof(struct frame_accessor));
-	frame_provider->image = (IplImage*)calloc(1, sizeof(IplImage));
-	//frame_provider->capture = (CvCapture*)calloc(1, sizeof(CvCapture));
-	//frame_provider->recorder = (CvVideoWriter*)calloc(1, sizeof(CvVideoWriter));
 	/* init tracker */
 	trk = (struct tracker *)calloc(1, sizeof(struct tracker));
-	trk->obj_pos_img = (IplImage*)calloc(1, sizeof(IplImage));
-	trk->main_marker_mask_img = (IplImage*)calloc(1, sizeof(IplImage));
-	trk->aux_marker_mask_img = (IplImage*)calloc(1, sizeof(IplImage));
-	trk->main_marker_matching_img = (IplImage*)calloc(1, sizeof(IplImage));
-	trk->aux_marker_matching_img = (IplImage*)calloc(1, sizeof(IplImage));
 	/* init tracked object properties */
 	obj = (struct tracked_object *)calloc(1, sizeof(struct tracked_object));
-
 }
 
 /* entry point */
@@ -52,10 +43,12 @@ int main(int argc, char* argv[]){
 	
 	/* timer utils */
 	struct timespec tstart, tcur;
+#ifdef STREAMER_ON
 	/* separate thread to handle the incomming connections */
 	pthread_t conn_handler;
 	/* ret code when creating thread */
 	int rc;
+#endif
 	/* one time init switch for markers search and setup */
 	int on_init = 0;
 
@@ -72,7 +65,7 @@ int main(int argc, char* argv[]){
 
 	/* init app by initializing all structs instances */
 	init_application();
-	
+
 	/* check the frames source */
 	if ((frame_provider->capture = get_source(frame_provider->capture, argc, argv))==NULL) {
 		printf("main: Cannot open stream\n");
@@ -107,6 +100,7 @@ int main(int argc, char* argv[]){
 	/* set callback for the template selector */
         cvSetMouseCallback(win_name, select_point, NULL);
 
+#ifdef STREAMER_ON
         /* init stream thread lock */
         if(pthread_rwlock_init(&(obj->buff_lock), NULL)!=0){
 		printf("main: Cannot init thread lock so cannot ensure thread synchronization\n");
@@ -116,6 +110,7 @@ int main(int argc, char* argv[]){
 	if ((rc = pthread_create(&conn_handler, NULL, remote_connections_handler, NULL))) {
    		printf("main: pthread_create, rc: %d\n", rc);
         }
+#endif
 
 	/* loop until no frames are received or user decides */
 	while(1) {
@@ -179,12 +174,15 @@ int main(int argc, char* argv[]){
 			else break;
 		}
 		/* check if end stream is sent */
-		if((int)cvWaitKey(2) == 'q') break; 
+		if((int)cvWaitKey(2) == 'q') {
+			printf("Exiting tracker ...\n");
+			break; 
+		}
 	}
-
+#ifdef STREAMER_ON
 	/* wait for the stream server */
 	pthread_join(conn_handler, NULL);
-	
+#endif	
 	/* dump log data */
 	if(dump_log_file(log_bin, trk->idx)!=0){
 		printf("Cannot dump file, restart experiment.");
