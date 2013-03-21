@@ -42,26 +42,19 @@ int record_stream_init(){
 }
 
 /** 
- * Initialize the stream recorder.
  * Record the incoming frames from the source and 
  * encode them into an MPEG file on the disk
  */
 int record_stream(){
 	/* connect to capture */
-	if(cvGrabFrame(frame_provider->capture)!=0){
-		printf("record_stream: Error grabbing frame from capture.\n");
-		return -1;
-	}          
+	cvGrabFrame(frame_provider->capture);        
 	/* retrieve a frame */
 	if((frame_provider->image = cvRetrieveFrame(frame_provider->capture, 0))==NULL){
 		printf("record_stream: Error retrieving frame.\n");
-		return -2;
+		return -1;
 	}  
 	/* add the frame to the file */
-	if(cvWriteFrame(frame_provider->recorder,frame_provider->image)!=0){
-		printf("record_stream: Cannot write frame to recorder.\n");
-		return -3;
-	}
+	cvWriteFrame(frame_provider->recorder,frame_provider->image);
 	return 0;
 }
 

@@ -182,6 +182,17 @@ int main(int argc, char* argv[]){
 		/* check if end stream is sent */
 		if((int)cvWaitKey(2) == 'q') {
 			printf("Exiting tracker ...\n");
+			/* if the recording was on we just free resources and exit */
+			if(frame_provider->is_recording = 1){
+				/* free the allocated memory*/
+				if(frame_provider->capture)
+					cvReleaseCapture(&frame_provider->capture);
+				/* close recorder */
+				record_stream_close();
+				/* destroy window handlers */
+				cvDestroyWindow(win_name);
+				return EXIT_SUCCESS;
+			}
 			break; 
 		}
 	}

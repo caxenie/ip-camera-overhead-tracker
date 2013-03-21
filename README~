@@ -87,7 +87,7 @@ Camera connection setup
 
 Others
 ======
-	The current source tree also contains a minimalistic client software (remote_access_tester) to connect to the stream server and get the data from the tracking application.
+	The current source tree also contains a minimalistic client software to connect to the stream server and get the data from the tracking application.
 	
 
 
