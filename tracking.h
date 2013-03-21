@@ -78,8 +78,6 @@ struct tracked_object{
 	short init;
 	/* data buffer to store tracking history */
 	char buffer[MAXBUF];
-	/* lock for writing the data to the buffer */
-	pthread_rwlock_t buff_lock;
 };
 
 /* Tracker instance */
@@ -88,6 +86,8 @@ extern struct tracker *trk;
 extern struct tracked_object *obj;
 /* font for GUI text  */
 extern CvFont font;
+/* timer utils */
+extern struct timespec tstart, tcur;
 
 #ifdef AUTO_FIND_MARKER
 /**

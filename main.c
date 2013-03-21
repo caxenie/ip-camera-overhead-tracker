@@ -22,6 +22,12 @@ CvFont font;
 struct frame_accessor *frame_provider;
 /* Data log */
 struct data_log *log_bin;
+/* sync lock with streamer thread */
+short send_on;
+/* client connected flag */
+short client_on;
+/* timer utils */
+struct timespec tstart, tcur;
 
 /* window name */
 const char* win_name="Overhead tracker";
@@ -41,8 +47,6 @@ void init_application(){
 /* entry point */
 int main(int argc, char* argv[]){	
 	
-	/* timer utils */
-	struct timespec tstart, tcur;
 #ifdef STREAMER_ON
 	/* separate thread to handle the incomming connections */
 	pthread_t conn_handler;
@@ -56,15 +60,18 @@ int main(int argc, char* argv[]){
 	cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.7, 0.7, 0.5, 1, 8);
 	/* create window as placeholder for captured frames and tracking */
 	cvNamedWindow(win_name, CV_WINDOW_AUTOSIZE);
-					  
+	
 	/* get initial time for timestamp */
 	if(clock_gettime(CLOCK_REALTIME, &tstart)==-1){
 		printf("main: Cannot access time subsystem\n");
 		exit(EXIT_FAILURE);
-	}
+	}				  
 
 	/* init app by initializing all structs instances */
 	init_application();
+	/* init streamer enable flag and client flag */
+	client_on = 0;
+	send_on = 0;
 
 	/* check the frames source */
 	if ((frame_provider->capture = get_source(frame_provider->capture, argc, argv))==NULL) {
@@ -74,9 +81,6 @@ int main(int argc, char* argv[]){
 	
 	/* get an initial frame to get stream properties */
 	frame_provider->image = cvQueryFrame(frame_provider->capture);
-
-	/* check if recording is requested is requested and init recorder */
-	if(frame_provider->is_recording==1) record_stream_init();
 	
 	/* create masking images for the object markers */
 	trk->main_marker_mask_img = cvCreateImage(cvSize(MARKER_SIZE, MARKER_SIZE),
@@ -100,12 +104,10 @@ int main(int argc, char* argv[]){
 	/* set callback for the template selector */
         cvSetMouseCallback(win_name, select_point, NULL);
 
+	/* check if recording is requested is requested and init recorder */
+	if(frame_provider->is_recording==1) record_stream_init();
+
 #ifdef STREAMER_ON
-        /* init stream thread lock */
-        if(pthread_rwlock_init(&(obj->buff_lock), NULL)!=0){
-		printf("main: Cannot init thread lock so cannot ensure thread synchronization\n");
-        }
-	
 	/* start remote log data sending thread  */
 	if ((rc = pthread_create(&conn_handler, NULL, remote_connections_handler, NULL))) {
    		printf("main: pthread_create, rc: %d\n", rc);
@@ -123,15 +125,19 @@ int main(int argc, char* argv[]){
 		}
 		else{
 			/* process only if we receive frames from the cam */
-			if((frame_provider->image = cvQueryFrame(frame_provider->capture))!=NULL){
-
+			if((frame_provider->image = cvQueryFrame(frame_provider->capture))!=NULL){		
+#ifdef STREAMER_ON			
+			/* if it is sending go on */
+			if(send_on==1) continue;
+#endif
 			/* initialize image with tracked positions to be used in visualization */
 			if(trk->obj_pos_img == NULL) {
 				trk->obj_pos_img = cvCreateImage(cvGetSize(frame_provider->image), IPL_DEPTH_32F, 3);
 			}
-			/* tracking is enabled for remote cam and recorded file */
+
+   			/* tracking is enabled only for remote cam and recorded file */
 			if(frame_provider->source!=LOCAL){
-				/* search markers and setup once */
+			/* search markers and setup once */
 			if(on_init==0){
 #ifdef AUTO_FIND_MARKER
 				  if(obj->main_is_on == 0){
@@ -160,12 +166,12 @@ int main(int argc, char* argv[]){
 					track_main_marker();
 					track_aux_marker();
 					/* write to log file and redisplay debug output */
-					present_data();
-				        /* get current time for timestamp computation */
-				        if(clock_gettime(CLOCK_REALTIME, &tcur)==-1){
-			                   printf("present_data: Cannot access time subsystem.");
-				        }
-				        log_bin[trk->idx].timestamp = compute_dt(&tcur, &tstart);
+					present_data();					
+#ifdef STREAMER_ON	
+					/* send data only if a client is connected */
+					if(client_on==1)
+						send_on = 1;
+#endif
 				}
 			}
 			/* update images */
@@ -179,17 +185,15 @@ int main(int argc, char* argv[]){
 			break; 
 		}
 	}
+
 #ifdef STREAMER_ON
 	/* wait for the stream server */
 	pthread_join(conn_handler, NULL);
 #endif	
 	/* dump log data */
 	if(dump_log_file(log_bin, trk->idx)!=0){
-		printf("Cannot dump file, restart experiment.");
+		printf("Cannot dump file, restart experiment\n");
 	}
-
-        /* destroy lock */
-	pthread_rwlock_destroy(&obj->buff_lock);	
 
 	/* free the allocated memory*/
 	if(frame_provider->capture)

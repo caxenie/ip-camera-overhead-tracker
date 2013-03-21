@@ -348,9 +348,15 @@ void present_data(){
 	log_bin[trk->idx].heading = theta;
 	log_bin[trk->idx].sample = trk->idx;
 
+	/* get current time for timestamp computation */
+	if(clock_gettime(CLOCK_REALTIME, &tcur)==-1){
+		printf("main: Cannot access time subsystem in the loop\n");
+	}
+	log_bin[trk->idx].timestamp = compute_dt(&tcur, &tstart);
+
 	/* write in the stream buffer */
         sprintf(obj->buffer, "%f,%f,%f,%d,%lf\n", X, Y, theta, trk->idx, log_bin[trk->idx].timestamp);
-	
+
 	/* update position in the GUI */
 	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, obj->x_pos, obj->y_pos, theta);
 

@@ -41,7 +41,7 @@ Usage
 
 		e.g.: 
 			./cam_track -r 						# record stream from local camera (i.e.: laptop webcam)
-			./cam_track -r http://10.162.242.18/mjpg/video.mjpg	# record MJPEG stream from IP Cam
+			./cam_track http://10.162.242.18/mjpg/video.mjpg -r 	# record MJPEG stream from IP Cam
 
 	2. Run the tracking algorithm on an input stream (using 2 coloured markers : small radius red+blue circles). 
 

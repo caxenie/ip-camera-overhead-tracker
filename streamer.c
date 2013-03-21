@@ -96,18 +96,24 @@ void * remote_connections_handler(void *data){
 	    printf("remote_connections_handler: Cannot accept\n");
             continue;
         }
+	/* set up the client flag */
+	client_on = 1;
 	   /* main data streaming loop for the connected client */
            while(1){
-		//pthread_rwlock_rdlock(&buff_lock);
+		if(send_on==1){
 		if (send(new_fd, obj->buffer, strlen(obj->buffer), 0) == -1){
-                	printf("remote_connections_handler: Cannot send data\n Exiting stream server ... \n");
+                	printf("remote_connections_handler: Client disconnected \n");
+			client_on = 0;
+			send_on = 0;
 			goto out;
 		}
-		//pthread_rwlock_unlock(&buff_lock);
+		send_on = 0;	
+		}
 	      }
     }
 out: 
 	close(new_fd);
 	close(sockfd);
+	printf("Exiting stream server ... \n");
 	pthread_exit(NULL);
 }
