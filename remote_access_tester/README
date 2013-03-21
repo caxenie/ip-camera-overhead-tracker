@@ -1,0 +1,32 @@
+
+	Remote access tester is a minimal software that allows to connect as a client to the stream server of the tracking
+	application and get the position data in the format x,y,heading,iter,timestamp.
+
+
+Compilation & run
+==================
+
+	# compile
+	make
+
+	# to clean the directory
+	make clean 
+
+	# run
+	make run
+
+General info
+============
+	# use Ctrl-C to exit the client
+
+	# run command line 
+	./remote_tester <server_ip_address> <server_port>
+
+	e.g.: for the Axis IP Cam in the robot room
+
+		# accessing the MJPEG (motion jpeg) stream
+		./remote_tester 10.162.242.18 56000
+	
+	The results are by default sent to stdout but you can easily dump to a file by redirection.
+    
+		./remote_tester 10.162.242.18 56000 >> remote_data.log

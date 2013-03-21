@@ -1,3 +1,4 @@
+# Overhead ip cam tracker - calibrator makefile
 all:
 	g++ -o calibration_helper main.cpp -g -Wall `pkg-config --cflags --libs opencv`
 

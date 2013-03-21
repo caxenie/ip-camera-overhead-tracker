@@ -29,7 +29,7 @@ General info
 		# accessing the MJPEG (motion jpeg) stream
 		./calibration_helper http://10.162.242.18/mjpg/video.mjpg
 	
-		# accessing the H264 RTSP stream (do not use, problems on Linux)
+		# accessing the H264 RTSP stream (not stable)
 		./calibration_helper rtsp://10.162.242.18/axis-media/media.amp
 
 	The results are stored in the calibration-points.txt.

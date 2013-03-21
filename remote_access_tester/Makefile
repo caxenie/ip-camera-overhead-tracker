@@ -1,3 +1,4 @@
+# Overhead ip cam tracker - minimal remote access code
 all:
 	g++ -o remote_tester main.cpp -g -Wall
 
