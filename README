@@ -25,8 +25,8 @@ Prerequisites, Compilers and Options
 	3. pkg-config
 
 2. For running the application without installing OpenCV and recompiling the source code and libraries:
-	- use the provided static libraries for 32 bit and 64 bit machines along with the pre-compiled binary (WORK IN PROGRESS...)
-	- in order to add changes to the code one must setup the system as described in option 1
+	1. use the provided static libraries for 32 bit and 64 bit machines along with the pre-compiled binary (WORK IN PROGRESS...)
+	2. in order to add changes to the code one must setup the system as described in option 1
 
 Usage
 =====
