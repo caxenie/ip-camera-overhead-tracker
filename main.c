@@ -180,7 +180,7 @@ int main(int argc, char* argv[]){
 			else break;
 		}
 		/* check if end stream is sent */
-		if((int)cvWaitKey(2) == 'q') {
+		if((int)(cvWaitKey(2) & 255) == 'q') {
 			printf("Exiting tracker ...\n");
 			if(client_on==0) goto out;
 			else break;			
