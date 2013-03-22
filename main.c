@@ -182,8 +182,10 @@ int main(int argc, char* argv[]){
 		/* check if end stream is sent */
 		if((int)cvWaitKey(2) == 'q') {
 			printf("Exiting tracker ...\n");
+			if(client_on==0) goto out;
+			else break;			
 			/* if the recording was on we just free resources and exit */
-			if(frame_provider->is_recording = 1){
+			if(frame_provider->is_recording == 1){
 				/* free the allocated memory*/
 				if(frame_provider->capture)
 					cvReleaseCapture(&frame_provider->capture);
@@ -201,6 +203,8 @@ int main(int argc, char* argv[]){
 	/* wait for the stream server */
 	pthread_join(conn_handler, NULL);
 #endif	
+
+out:
 	/* dump log data */
 	if(dump_log_file(log_bin, trk->idx)!=0){
 		printf("Cannot dump file, restart experiment\n");

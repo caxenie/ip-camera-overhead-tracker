@@ -12,9 +12,6 @@ Compilation & run
 	# to clean the directory
 	make clean 
 
-	# run
-	make run
-
 General info
 ============
 	# use Ctrl-C to exit the client
