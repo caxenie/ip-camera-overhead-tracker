@@ -30,7 +30,7 @@
 #include <cv.h>
 
 #define MARKER_SIZE 			10	/* the object markers size */	
-#define SEARCH_SPACE_SIZE   		65	/* search space window size for template matching */
+#define SEARCH_SPACE_SIZE   		60	/* search space window size for template matching */
 #define MATCHING_THRESHOLD  		0.5	/* template matching threshold */	
 #define CONVERSION_FACTOR_X		0.280	/* cam space to world space mapping value for X axis with lens distort */
 #define CONVERSION_FACTOR_Y		0.290	/* cam space to world space mapping value for Y axis with lens distort */

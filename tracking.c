@@ -214,8 +214,8 @@ void track_aux_marker(){
 			/* draw an identification rectangle there */
 			cvRectangle(frame_provider->image,				/* image to draw in */
 			            cvPoint(obj->x_pos_aux_mark, obj->y_pos_aux_mark), 	/* one vertex */
-			            cvPoint(obj->x_pos_aux_mark + MARKER_SIZE/2,	/* opposite vertex */
-			                    obj->y_pos_aux_mark + MARKER_SIZE/2),  
+			            cvPoint(obj->x_pos_aux_mark + MARKER_SIZE,	/* opposite vertex */
+			                    obj->y_pos_aux_mark + MARKER_SIZE),  
 			            cvScalar( 255, 0, 0, 0 ),				/* color */
 			            2,							/* lines thickness */
 			            0,							/* line type */
@@ -273,8 +273,8 @@ void track_main_marker(){
 			/* draw an identification rectangle there */
 			cvRectangle(frame_provider->image,		 /* image to draw in */
 			            cvPoint(obj->x_pos, obj->y_pos), 	 /* one vertex */
-			            cvPoint(obj->x_pos + MARKER_SIZE/2,	 /* opposite vertex */
-			                    obj->y_pos + MARKER_SIZE/2),
+			            cvPoint(obj->x_pos + MARKER_SIZE,	 /* opposite vertex */
+			                    obj->y_pos + MARKER_SIZE),
 			            cvScalar( 0, 0, 255, 0 ),		 /* color */
 			            2,					 /* lines thickness */
 			            0,					 /* line type */
