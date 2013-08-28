@@ -77,7 +77,7 @@ int* get_stream_properties(CvCapture *c);
 /**
  * Dumps the memory saved log file to the disk 
  */
-int dump_log_file(struct data_log* buffer, int buffer_size);
+int dump_log_file(char* log_file, struct data_log* buffer, int buffer_size);
 /**
  * Compute the time interval for the timestamp in ms 
  */

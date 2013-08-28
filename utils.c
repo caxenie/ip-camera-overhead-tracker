@@ -121,21 +121,12 @@ int* get_stream_properties(CvCapture *c){
 /**
  * Dumps the memory saved log file to the disk 
  */
-int dump_log_file(struct data_log* buffer, int buffer_size){
+int dump_log_file(char* log_file, struct data_log* buffer, int buffer_size){
     /* prefix with time information the dumped file */
     int i;
-    time_t rawtime;
-    struct tm * timeinfo;
-    char log_file_name [200];
     FILE *f;
-    /* get OS time */
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );
-    /* prepend */
-    strftime (log_file_name, 80,"%Y-%m-%d__%H:%M:%S",timeinfo);
-    strcat(log_file_name,"_overhead_tracker_position" );
-    /* open file for writing */	
-    if((f = fopen(log_file_name, "w+"))==NULL){
+    /* open file for appending */	
+    if((f = fopen(log_file, "a"))==NULL){
         printf("dump_log_file: Cannot open log file!\n");
         return -1;
     }

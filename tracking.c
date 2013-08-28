@@ -342,7 +342,7 @@ void present_data(){
 			if(theta > 0.0f || theta < 0.0f) theta =0.0f;
 			init_fix = 1;
 		}
-        /* fill in the log struct */
+       /* fill in the log struct */
 	log_bin[trk->idx].xpos = X;
 	log_bin[trk->idx].ypos = Y;
 	log_bin[trk->idx].heading = theta;
@@ -353,7 +353,7 @@ void present_data(){
 		printf("main: Cannot access time subsystem in the loop\n");
 	}
 	log_bin[trk->idx].timestamp = compute_dt(&tcur, &tstart);
-
+	
 	/* write in the stream buffer */
         sprintf(obj->buffer, "%f,%f,%f,%d,%lf\n", X, Y, theta, trk->idx, log_bin[trk->idx].timestamp);
 

@@ -27,3 +27,7 @@ General info
 	The results are by default sent to stdout but you can easily dump to a file by redirection.
     
 		./remote_tester 10.162.242.18 56000 >> remote_data.log
+
+	As an alternative to the remote tester one can use netcat commandline utility and redirect the stream to a file:
+
+		nc 10.162.214.18 56000 >> remote_data.log

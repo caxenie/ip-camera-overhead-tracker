@@ -28,12 +28,23 @@ short send_on;
 short client_on;
 /* timer utils */
 struct timespec tstart, tcur;
+/* log file name */
+char *log_file;
 
 /* window name */
-const char* win_name="Overhead tracker";
+const char* win_name="RobotLAB: IP Cam overhead tracker";
 
 /* init application */
 void init_application(){
+	/* get OS time */
+	time_t rawtime;
+        struct tm * timeinfo;
+    	log_file = (char*)calloc(200, sizeof(char));
+	time ( &rawtime );
+    	timeinfo = localtime ( &rawtime );
+    	/* prepend */
+   	strftime (log_file, 80,"%Y-%m-%d__%H:%M:%S", timeinfo);
+	strcat(log_file,"_overhead_tracker_position" );
 	/* init log data support */
 	log_bin = (struct data_log*)calloc(MAX_LOG_SIZE, sizeof(struct data_log));
 	/* init frame source */
@@ -42,6 +53,7 @@ void init_application(){
 	trk = (struct tracker *)calloc(1, sizeof(struct tracker));
 	/* init tracked object properties */
 	obj = (struct tracked_object *)calloc(1, sizeof(struct tracked_object));
+	
 }
 
 /* entry point */
@@ -172,7 +184,17 @@ int main(int argc, char* argv[]){
 					if(client_on==1)
 						send_on = 1;
 #endif
+				/* partially dump log data (every 1000 samples) as we are saving in RAM and OS complains */
+				if(trk->idx==1000){
+					if(dump_log_file(log_file, log_bin, trk->idx)!=0){
+			                	printf("Cannot dump file, restart experiment\n");
+			        	}
+					else{ /* empty the buffer and reset the index */
+						memset(log_bin, 0, trk->idx);
+						trk->idx = 0;
+					}
 				}
+			     }
 			}
 			/* update images */
 			cvShowImage(win_name, frame_provider->image);
@@ -206,7 +228,7 @@ int main(int argc, char* argv[]){
 
 out:
 	/* dump log data */
-	if(dump_log_file(log_bin, trk->idx)!=0){
+	if(dump_log_file(log_file, log_bin, trk->idx)!=0){
 		printf("Cannot dump file, restart experiment\n");
 	}
 
