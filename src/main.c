@@ -91,6 +91,9 @@ int main(int argc, char* argv[]){
 		printf("main: Cannot open stream\n");
 		return (EXIT_FAILURE);
 	}
+
+	/* get stream properties - resolution */
+	get_stream_properties(frame_provider->capture);
 	
 	/* get an initial frame to get stream properties */
 	frame_provider->image = cvQueryFrame(frame_provider->capture);

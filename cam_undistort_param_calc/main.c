@@ -104,6 +104,10 @@ G_MODULE_EXPORT void on_adjustment2_value_changed(GtkAdjustment *adj, AppData *d
 /* callback for quiting the app and saving the output img */
 G_MODULE_EXPORT void on_window_destroy(GtkObject *object, AppData *data)
 {
+	/* params dump into a file */
+	char *param_file = (char*)calloc(30, sizeof(char));
+	strcpy(param_file, default_filename);
+	FILE *f = fopen(strcat(param_file, "-undistort-params"), "w");
 	/* setup the save params */
         int* save_params = (int *)calloc(3, sizeof(int));
 	save_params[0] = CV_IMWRITE_JPEG_QUALITY;
@@ -118,6 +122,7 @@ G_MODULE_EXPORT void on_window_destroy(GtkObject *object, AppData *data)
         /* write output to disk after converting to the proper color system */
 	cvCvtColor(data->cv_output_img, data->cv_output_img, CV_BGR2RGB);
 	cvSaveImage(strcat(default_filename, "-undistorted"), data->cv_output_img, save_params);
+	fprintf(f, "k1=%10.20lf\nk2=%10.20lf\n", data->k1, data->k2);
 	/* quit the main event loop */
 	gtk_main_quit();
 }
