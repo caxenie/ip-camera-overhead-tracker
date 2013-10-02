@@ -27,12 +27,13 @@
 #include <semaphore.h> 
 #include <stdlib.h>
 
-#define PORT 		"56000"	/* port number exposed by the server */
+#define DEFAULT_PORT	"56000"
 #define BACKLOG 	20      /* how many pending connections queue will hold */
 #define STREAMER_ON	
 
 extern short send_on;
 extern short client_on;
+extern char* port;
 
 /**
  * Get client sockaddr for stream server 

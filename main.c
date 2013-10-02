@@ -22,8 +22,9 @@ CvFont font;
 struct frame_accessor *frame_provider;
 /* Data log */
 struct data_log *log_bin;
-/* sync lock with streamer thread */
+/* sync lock with streamer thread and comm port*/
 short send_on;
+char* port;
 /* client connected flag */
 short client_on;
 /* timer utils */

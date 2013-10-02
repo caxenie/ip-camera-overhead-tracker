@@ -153,8 +153,9 @@ int main(int argc, char* argv[])
 		/* update images */
 		cvShowImage("Calibration helper", image);
 		
-		/* check if q is sent */
-		if((int)cvWaitKey('q') == 113) break; 
+		/* check if quit is sent */
+		if((int)(cvWaitKey(2) & 255) == 'q') 
+			 break; 
 		
 	}
 	/* free the allocated memory*/

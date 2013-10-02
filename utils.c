@@ -1,23 +1,27 @@
 /**
  * @author Cristian Axenie, cristian.axenie@tum.de
- * 
+ *
  * Simple tracking application using data streamed over TCP/IP
  * from Axis IP Cam (Robot room / Holodeck), local camera or locally saved file.
  * The tracking algorithm will be used for mobile robot tracking in indoor operation.
- * 
- * Medium access utilities definitions. 
+ *
+ * Medium access utilities definitions.
  */
 
 #include "utils.h"
 
-/** 
+#define DEFAULT_PORT "56000"
+/* comm port for streaming */
+char* port;
+
+/**
  * Initialize the stream recorder
  */
 int record_stream_init(){
 	/* recording parameters */
 	int isColor = 1;
-	int fps = 30;  
-	int frame_width  = frame_provider->image->width; 
+	int fps = 30;
+	int frame_width  = frame_provider->image->width;
 	int frame_height  = frame_provider->image->height;
 	/* add timestamp to the file */
     	time_t rawtime;
@@ -41,24 +45,24 @@ int record_stream_init(){
 	return 0;
 }
 
-/** 
- * Record the incoming frames from the source and 
+/**
+ * Record the incoming frames from the source and
  * encode them into an MPEG file on the disk
  */
 int record_stream(){
 	/* connect to capture */
-	cvGrabFrame(frame_provider->capture);        
+	cvGrabFrame(frame_provider->capture);
 	/* retrieve a frame */
 	if((frame_provider->image = cvRetrieveFrame(frame_provider->capture, 0))==NULL){
 		printf("record_stream: Error retrieving frame.\n");
 		return -1;
-	}  
+	}
 	/* add the frame to the file */
 	cvWriteFrame(frame_provider->recorder,frame_provider->image);
 	return 0;
 }
 
-/** 
+/**
  * Close the stream recorder
  */
 void record_stream_close(){
@@ -72,7 +76,7 @@ void record_stream_close(){
 CvCapture* get_source(CvCapture *c, int nr, char** in){
 	/* check if preallocated */
 	if(c!=NULL) c = NULL;
-	
+
 	/* check if recording is on and init recorder */
 	for (int i = 1; i < nr; i++){  /* Skip argv[0] (program name). */
 		if(strstr(in[i],"-r")!=NULL){
@@ -82,16 +86,18 @@ CvCapture* get_source(CvCapture *c, int nr, char** in){
 			nr--;
 		}
 	}
-	
+
 	/* check source */
-	if((nr == 1) || 
+	if((nr == 1) ||
 	   (nr == 2 && strlen(in[1])==1 && isdigit(in[1][0]))){
 		printf("get_source: capture from local cam\n");
 		/* capture from local cam */
 		c = cvCaptureFromCAM( nr==2 ? in[1][0] - '0' : 0);
 		frame_provider->source = LOCAL;
-	} else if( strstr(in[1],"http")!=NULL && nr == 2 ) {
+	} else if( strstr(in[1],"http")!=NULL && nr == 3 ) {
 		/* capture from remote cam */
+		if(strcmp(in[2], "-r")==0) port = DEFAULT_PORT;
+		else port = in[2];
 		printf("get_source: capture from remote cam\n");
 		c = cvCreateFileCapture(in[1]);
 		frame_provider->source = REMOTE;
@@ -119,20 +125,20 @@ int* get_stream_properties(CvCapture *c){
 }
 
 /**
- * Dumps the memory saved log file to the disk 
+ * Dumps the memory saved log file to the disk
  */
 int dump_log_file(char* log_file, struct data_log* buffer, int buffer_size){
     /* prefix with time information the dumped file */
     int i;
     FILE *f;
-    /* open file for appending */	
+    /* open file for appending */
     if((f = fopen(log_file, "a"))==NULL){
         printf("dump_log_file: Cannot open log file!\n");
         return -1;
     }
     /* write data */
     for(i=0;i<buffer_size;i++){
-        fprintf(f, "%lf,%lf,%lf,%d,%lf\n", buffer[i].xpos, buffer[i].ypos, buffer[i].heading, buffer[i].sample, buffer[i].timestamp);
+        fprintf(f, "%ld %f %f %f\n", buffer[i].timestamp, buffer[i].xpos, buffer[i].ypos, buffer[i].heading);
     }
     /* close file */
     fclose(f);
@@ -140,15 +146,26 @@ int dump_log_file(char* log_file, struct data_log* buffer, int buffer_size){
 }
 
 /**
- * Compute the time interval for the timestamp in ms 
+ * Compute the time interval for the timestamp in ms
  */
+
+uint64_t get_realtime_ns() {
+	struct timespec ts;
+	if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+		perror("clock_gettime");
+		return 0;
+	}
+	return ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+
 double compute_dt(struct timespec *end_time, struct timespec *start_time){
   /* difference holder */
   struct timespec difference;
   /* compute difference */
   difference.tv_sec =end_time->tv_sec -start_time->tv_sec ;
   difference.tv_nsec=end_time->tv_nsec-start_time->tv_nsec;
-  
+
   while(difference.tv_nsec<0)
   {
     difference.tv_nsec+=1000000000;

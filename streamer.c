@@ -49,7 +49,7 @@ void * remote_connections_handler(void *data){
     hints.ai_flags = AI_PASSIVE; // use my IP
 
     /* get server address info */
-    if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
         printf("remote_connections_handler: %s\n", gai_strerror(rv));
         pthread_exit(NULL);
     }

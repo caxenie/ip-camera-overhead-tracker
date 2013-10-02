@@ -102,14 +102,10 @@ void select_point(int event, int x_coord, int y_coord, int flags, void *param){
 	   /* select main marker */	
 	   if(obj->main_is_on==0){
 		/* get the coordinate in the subimage and copy to global coord */
-	 	obj->mx = x_coord;
-		obj->my = y_coord;
+		obj->mx = x_coord-(MARKER_SIZE/2);
+		obj->my = y_coord-(MARKER_SIZE/2);
 		/* setup a rectangular ROI */
-		cvSetImageROI(frame_provider->image,
-			     cvRect(obj->mx,
-				    obj->my,
-				    8,
-				    8)); 	
+		cvSetImageROI(frame_provider->image, cvRect(obj->mx,obj->my,MARKER_SIZE,MARKER_SIZE));
 		/* set flag for main loop */
 		obj->main_is_on = 1;
 		cvResetImageROI(frame_provider->image);
@@ -117,14 +113,10 @@ void select_point(int event, int x_coord, int y_coord, int flags, void *param){
 	    }
 	    /* select aux marker */    	
 	    if(obj->aux_is_on==0){
-		obj->tx = x_coord;
-                obj->ty = y_coord;
+		obj->tx = x_coord-(MARKER_SIZE/2);
+		obj->ty = y_coord-(MARKER_SIZE/2);
                 /* setup a rectangular ROI */
-                cvSetImageROI(frame_provider->image,
-                             cvRect(obj->tx,
-                                    obj->ty,
-                                    8,
-                                    8));
+		cvSetImageROI(frame_provider->image, cvRect(obj->tx,obj->ty,MARKER_SIZE,MARKER_SIZE));
                 /* set flag for main loop */
                 obj->aux_is_on = 1;
 		cvResetImageROI(frame_provider->image);
@@ -304,6 +296,15 @@ void present_data(){
 	static int init_fix = 0;
 	/* GUI printed string */
 	char pos_val[200];
+	
+	/* barrel distortion handling */
+	double ex = 0.0f, ey = 0.0f, r = 0.0f, f = 0.0f;
+	int* props = get_stream_properties(frame_provider->capture);
+	int centerX = props[1]/2;
+	int centerY = props[0]/2;
+	double k1 = 0.0016;
+	double k2 = 0.000075;
+
 	/* init coordinates */
 	if(obj->init==0){
 		X = 0.0f;
@@ -312,6 +313,8 @@ void present_data(){
 		obj->init = 1;
 	}
 	else{
+		/* TODO Add barrel de-distortion code here */
+
 		/* main marker camera coordinates to world coordinates transformation and update */
 		if(obj->x_pos > x_pos_ant){
 			X += abs(obj->x_pos - x_pos_ant)*CONVERSION_FACTOR_X;
@@ -346,16 +349,18 @@ void present_data(){
 	log_bin[trk->idx].xpos = X;
 	log_bin[trk->idx].ypos = Y;
 	log_bin[trk->idx].heading = theta;
-	log_bin[trk->idx].sample = trk->idx;
 
 	/* get current time for timestamp computation */
 	if(clock_gettime(CLOCK_REALTIME, &tcur)==-1){
 		printf("main: Cannot access time subsystem in the loop\n");
 	}
-	log_bin[trk->idx].timestamp = compute_dt(&tcur, &tstart);
-	
+
+	/* TODO If one needs interframe difference */
+	/* log_bin[trk->idx].timestamp = compute_dt(&tcur, &tstart); */
+	log_bin[trk->idx].timestamp = 1000000000*tcur.tv_sec + tcur.tv_nsec;
+
 	/* write in the stream buffer */
-        sprintf(obj->buffer, "%f,%f,%f,%d,%lf\n", X, Y, theta, trk->idx, log_bin[trk->idx].timestamp);
+        sprintf(obj->buffer, "%ld,%f,%f,%f\n", log_bin[trk->idx].timestamp, X, Y, theta);
 
 	/* update position in the GUI */
 	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, obj->x_pos, obj->y_pos, theta);

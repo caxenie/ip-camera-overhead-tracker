@@ -7,7 +7,7 @@ Basic Installation
 
 The simplest way to install this package is:
 	 1. unpack 
-		`tar -xvf overhead-tracker-0.1.tar.gz'.
+		`tar -xvf overhead-tracker-MAJOR.MINOR.tar.gz'.
 	 2. `cd' to the directory containing the package's source code.
 	 3. Type `make all' to compile the package.
 	 4. You can remove the program binaries and object files from the
@@ -34,28 +34,29 @@ Usage
 
 	1. Record a stream to a file stored on the disk.
 
-		./cam_track <input_stream> -r
+		./cam_track <input_stream> <port> -r
 
 			where <input_stream> can be:
 				-  remote stream (e.g. MJPEG, RTSP)
 			        -  default option for running without args: local camera
+			      <port>: defaults to 56000 but can be set according setup
 
 		e.g.: 
-			./cam_track -r 						# record stream from local camera (i.e.: laptop webcam)
-			./cam_track http://10.162.242.18/mjpg/video.mjpg -r 	# record MJPEG stream from IP Cam
+			./cam_track -r 							# record stream from local camera (i.e.: laptop webcam)
+			./cam_track http://10.162.242.18/mjpg/video.mjpg 56000  -r 	# record MJPEG stream from IP Cam
 
 	2. Run the tracking algorithm on an input stream (using 2 coloured markers : small radius red+blue circles). 
 
-		./cam_track <input_stream>
+		./cam_track <input_stream> <port>
 
 		e.g.:
 			./cam_track  						# run the tracking algorithm on local camera stream (i.e.: laptop webcam)
-			./cam_track http://10.162.242.18/mjpg/video.mjpg	# run the tracking algorithm on MJPEG stream from IP Cam
+			./cam_track http://10.162.242.18/mjpg/video.mjpg 56000	# run the tracking algorithm on MJPEG stream from IP Cam
 			./cam_track demo/test-demo-recording.avi		# run the tracking algorithm on a locally saved file (i.e.: demo recording in the demo directory, old runs)
 
 	3. An additional feature is to stream out the data from the tracking algorithm to a remote application connected as a client.
 		- currently the tracking applications has a stream server embedded which is able to stream data for clients (at the moment only one)
-		- in the current setup the camera is running at 25 FPS and the stream server outputs a new position from the tracker to a client at 20Hz
+		- in the current setup the camera is running at 30 FPS and the stream server outputs a new position from the tracker to a client at 25Hz
 
 	Sample algorithm off-line testing:
 		
@@ -71,11 +72,10 @@ Usage
 		- the recorded file will be an MPEG-4 encoded .AVI file at 30FPS using a date and time prefixed name e.g %Y-%m-%d__%H:%M:%S" and a fixed identifier *_cam_tracker_rec.avi 
 		- data logged data during the algorithm execution will be saved in a text file using a date and time prefixed name e.g %Y-%m-%d__%H:%M:%S" and a fixed identifier *_overhead_tracker_position
 				- the format is 
-						XPOS,YPOS,HEADING,ITER,TIMESTAMP
+						TIMESTAMP,XPOS,YPOS,HEADING
 						
 					where XPOS,YPOS,HEADING are the 2D coordinates and heading
-					      ITER iteration (increses with every frame)
-					      TIMESTAMP number of milliseconds from the start of the app until the current position update in the frame
+					      TIMESTAMP number of nanos from the epoch (subtraction needed in own code / data alignment with other sources)
 		- the tracking data can be observed during runtime by getting the pose information in world space, camera space and heading and also the robot trace in the GUI
 				- the format is given as:
 					X_POS,Y_POS,x_frame,y_frame,HEADING
