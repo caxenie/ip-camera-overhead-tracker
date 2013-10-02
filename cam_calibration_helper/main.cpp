@@ -31,12 +31,14 @@ IplImage* image = NULL;
 /* file to save the selected points coordinates */
 FILE *f;
 
+/* flag to mark the use of an image instead of stream */
+short is_image;
+
 /**
 * Get the stream source local saved file, local cam or remote stream
 */
 CvCapture* get_source(CvCapture *c, int nr, char** in)
 {
-	/* check if preallocated */
 	if(c!=NULL) c = NULL;
 	/* check source */
 	if(nr == 1 || (nr == 2 && strlen(in[1])==1 && isdigit(in[1][0]))) {
@@ -51,7 +53,7 @@ CvCapture* get_source(CvCapture *c, int nr, char** in)
 		printf("get_source: capture from locally saved file\n");
 		/* capture from local sved file */
 		c = cvCaptureFromAVI( in[1] );
-	}
+        }
 	return c;
 }
 
@@ -121,32 +123,40 @@ int main(int argc, char* argv[])
 	/* init font system */
 	cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0.5, 1, 8);
 
-	/* check the source */
-	if ((capture = get_source(capture, argc, argv))==NULL) {
-		printf("main: cannot open stream!\n");
-		return 1;
+	/* check the type of input */
+	if(argc==2 && strstr(argv[1], "jpg")!=NULL) is_image = 1;
+
+	if(is_image==0){
+		/* check the source */
+		if ((capture = get_source(capture, argc, argv))==NULL) {
+			printf("main: cannot open stream!\n");
+			return 1;
+		}
+		/* get an initial frame to get properties */
+		image = cvQueryFrame(capture);
+
+	}
+	else{
+		image = cvLoadImage(argv[1], CV_LOAD_IMAGE_COLOR);
 	}
 
 	/* create window as placeholder for captured frames and marking */
 	cvNamedWindow("Calibration helper", CV_WINDOW_AUTOSIZE);
-
-	/* get an initial frame to get properties */
-	image = cvQueryFrame(capture);
 
 	/* create image to store markers */
 	markers_img = cvCreateImage(cvSize(image->width, image->height),
 	                               image->depth,
 	                               image->nChannels);
 
-
 	/* set callback for the template selector */
 	cvSetMouseCallback("Calibration helper", select_point, NULL);
 
 	/* loop until user decides */
 	while(1) {
-		/* grab and return a frame from source or loop*/
-		image = cvQueryFrame(capture);
-
+		if(is_image==0){
+			/* grab and return a frame from source or loop*/
+			image = cvQueryFrame(capture);
+		}
 		/* object tracking */
 		mark_points();
 

@@ -8,6 +8,8 @@
 #define K1_MAX 0.0032
 #define K2_MAX 0.00015
 
+char* default_filename;
+
 typedef struct _app_data AppData;
 struct _app_data
 {
@@ -99,10 +101,31 @@ G_MODULE_EXPORT void on_adjustment2_value_changed(GtkAdjustment *adj, AppData *d
 	undistort_image(data);
 }
 
+/* callback for quiting the app and saving the output img */
+G_MODULE_EXPORT void on_window_destroy(GtkObject *object, AppData *data)
+{
+	/* setup the save params */
+        int* save_params = (int *)calloc(3, sizeof(int));
+	save_params[0] = CV_IMWRITE_JPEG_QUALITY;
+	save_params[1] = 100;
+	save_params[2] = 0;
+
+	/* check data */
+        if(data==NULL){
+                fprintf(stderr, "WARNING: No app data !\n");
+                return;
+        }
+        /* write output to disk after converting to the proper color system */
+	cvCvtColor(data->cv_output_img, data->cv_output_img, CV_BGR2RGB);
+	cvSaveImage(strcat(default_filename, "-undistorted"), data->cv_output_img, save_params);
+	/* quit the main event loop */
+	gtk_main_quit();
+}
+
 int 
 main( int argc, char **argv )
 {
-	char *default_filename = argv[1];
+	default_filename = argv[1];
 
 	/* interface to create GUI, error and app data */
 	GtkBuilder *builder;

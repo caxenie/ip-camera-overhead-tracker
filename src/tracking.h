@@ -36,9 +36,8 @@
 #define CONVERSION_FACTOR_Y		0.290	/* cam space to world space mapping value for Y axis with lens distort */
 #define MAXBUF				50 	/* max buffer length for data sending */
 /* barrel de-distortion factors - 2nd order polynomial distort fits well */
-#define K1_VAL				0.000072019464720195
-#define K2_VAL				0.000001824817518248
-
+#define K1_VAL				0.000031143552311436
+#define K2_VAL				0.000002007299270073
 
 #define VERBOSE				/* get markers, trace and additional info */
 // #define AUTO_FIND_MARKERS		/* detects markers automatically - not stable */

@@ -314,7 +314,8 @@ void present_data(){
 	}
 	else{
 		/* TODO Add barrel de-distortion code here */
-
+		
+		
 		/* main marker camera coordinates to world coordinates transformation and update */
 		if(obj->x_pos > x_pos_ant){
 			X += abs(obj->x_pos - x_pos_ant)*CONVERSION_FACTOR_X;
