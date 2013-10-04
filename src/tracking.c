@@ -410,7 +410,7 @@ void present_data(){
 	static int old_mark_ypos = 0;
 	/* superimpose the trace of the tracked object */
 	if(x_pos_ant_vis>0 && y_pos_ant_vis>0) {	
-		if(conv_xpos>0 && conv_ypos>0) {
+		if(obj->x_pos >0 && obj->y_pos>0) {
 			/* create a tracking line marker between 2 succesive points while target is moving (object trace) */
 			cvLine(trk->obj_pos_img, cvPoint(obj->x_pos, obj->y_pos), cvPoint(old_mark_xpos, old_mark_ypos), cvScalar(0,255,0,0.0), 3, 8, 0);
 		}

@@ -5,8 +5,8 @@
 #include <gtk/gtk.h>
 #include <string.h>
 
-#define K1_MAX 0.0006
-#define K2_MAX 0.0003
+#define K1_MAX 0.001
+#define K2_MAX 0.000003
 
 char* default_filename;
 
@@ -121,8 +121,9 @@ G_MODULE_EXPORT void on_window_destroy(GtkObject *object, AppData *data)
         }
         /* write output to disk after converting to the proper color system */
 	cvCvtColor(data->cv_output_img, data->cv_output_img, CV_BGR2RGB);
-	cvSaveImage(strcat(default_filename, "-undistorted"), data->cv_output_img, save_params);
+	cvSaveImage(strcat(default_filename,"-output.jpg"), data->cv_output_img, save_params);
 	fprintf(f, "k1=%10.20lf\nk2=%10.20lf\n", data->k1, data->k2);
+	fclose(f);
 	/* quit the main event loop */
 	gtk_main_quit();
 }

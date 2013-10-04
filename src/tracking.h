@@ -33,12 +33,12 @@
 #define SEARCH_SPACE_SIZE   		60		/* search space window size for template matching */
 #define MATCHING_THRESHOLD  		0.5		/* template matching threshold */	
 /* compute mapping factors from frame space to workd space */
-#define CONVERSION_FACTOR_X		0.258878504	/* cam space to world space mapping value for X axis */
-#define CONVERSION_FACTOR_Y		0.265337423	/* cam space to world space mapping value for Y axis */
+#define CONVERSION_FACTOR_X		0.312071973	/* cam space to world space mapping value for X axis */
+#define CONVERSION_FACTOR_Y		0.359820359	/* cam space to world space mapping value for Y axis */
 #define MAXBUF				50 		/* max buffer length for data sending */
 /* barrel de-distortion factors - 2nd order polynomial distort fits well */
-#define K1_VAL				0.000031143552311436
-#define K2_VAL				0.000002007299270073
+#define K1_VAL				0.00003462603878116300	
+#define K2_VAL				0.00000083518005540200
 
 #define VERBOSE						/* get markers, trace and additional info */
 // #define AUTO_FIND_MARKERS				/* detects markers automatically - not stable */
