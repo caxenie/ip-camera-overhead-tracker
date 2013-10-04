@@ -29,18 +29,19 @@
 #include <highgui.h>
 #include <cv.h>
 
-#define MARKER_SIZE 			16	/* the object markers size */	
-#define SEARCH_SPACE_SIZE   		60	/* search space window size for template matching */
-#define MATCHING_THRESHOLD  		0.5	/* template matching threshold */	
-#define CONVERSION_FACTOR_X		0.280	/* cam space to world space mapping value for X axis with lens distort */
-#define CONVERSION_FACTOR_Y		0.290	/* cam space to world space mapping value for Y axis with lens distort */
-#define MAXBUF				50 	/* max buffer length for data sending */
+#define MARKER_SIZE 			16		/* the object markers size */	
+#define SEARCH_SPACE_SIZE   		60		/* search space window size for template matching */
+#define MATCHING_THRESHOLD  		0.5		/* template matching threshold */	
+/* compute mapping factors from frame space to workd space */
+#define CONVERSION_FACTOR_X		0.258878504	/* cam space to world space mapping value for X axis */
+#define CONVERSION_FACTOR_Y		0.265337423	/* cam space to world space mapping value for Y axis */
+#define MAXBUF				50 		/* max buffer length for data sending */
 /* barrel de-distortion factors - 2nd order polynomial distort fits well */
 #define K1_VAL				0.000031143552311436
 #define K2_VAL				0.000002007299270073
 
-#define VERBOSE				/* get markers, trace and additional info */
-// #define AUTO_FIND_MARKERS		/* detects markers automatically - not stable */
+#define VERBOSE						/* get markers, trace and additional info */
+// #define AUTO_FIND_MARKERS				/* detects markers automatically - not stable */
 
 /* 
  * Tracker utilities 

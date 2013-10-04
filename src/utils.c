@@ -121,7 +121,6 @@ int* get_stream_properties(CvCapture *c){
 	                 CV_CAP_PROP_FRAME_HEIGHT); 		/* frame height */
 	stream_prop[1] = (int)cvGetCaptureProperty(c, 		/* capture */
 	                 CV_CAP_PROP_FRAME_WIDTH); 			/* frame width */
-	printf("Stream resolution: H x W = %d x %d\n", stream_prop[0], stream_prop[1]);
 	return stream_prop;
 }
 

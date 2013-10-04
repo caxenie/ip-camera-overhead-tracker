@@ -299,11 +299,12 @@ void present_data(){
 	
 	/* barrel distortion handling */
 	double ex = 0.0f, ey = 0.0f, r = 0.0f, f = 0.0f;
+	int newX = 0, newY = 0;
 	int* props = get_stream_properties(frame_provider->capture);
 	int centerX = props[1]/2;
 	int centerY = props[0]/2;
-	double k1 = 0.0016;
-	double k2 = 0.000075;
+	int conv_xpos = 0;
+	int conv_ypos = 0;
 
 	/* init coordinates */
 	if(obj->init==0){
@@ -313,31 +314,41 @@ void present_data(){
 		obj->init = 1;
 	}
 	else{
-		/* TODO Add barrel de-distortion code here */
-		
-		
+		/* barrel de-distortion  */   
+		ex = obj->x_pos - centerX;
+		ey = obj->y_pos - centerY;
+		r = sqrt(ex*ex + ey*ey);
+		f = K2_VAL*r*r + K1_VAL*r + 1;
+		newX = (int)floor(centerX + ex*f);
+		newY = (int)floor(centerY + ey*f);
+		if(newY > 0 && newY <= props[0]){
+                                if(newX > 0 && newX <= props[1]){
+                                        conv_xpos = newX;
+					conv_ypos = newY;
+                                }
+                        }
 		/* main marker camera coordinates to world coordinates transformation and update */
-		if(obj->x_pos > x_pos_ant){
-			X += abs(obj->x_pos - x_pos_ant)*CONVERSION_FACTOR_X;
-			if(obj->y_pos > y_pos_ant){
-				Y -= abs(obj->y_pos - y_pos_ant)*CONVERSION_FACTOR_Y;	
+		if(conv_xpos > x_pos_ant){
+			X += abs(conv_xpos - x_pos_ant)*CONVERSION_FACTOR_X;
+			if(conv_ypos > y_pos_ant){
+				Y -= abs(conv_ypos - y_pos_ant)*CONVERSION_FACTOR_Y;	
 			}
 			else{
-				Y += abs(obj->y_pos - y_pos_ant)*CONVERSION_FACTOR_Y;
+				Y += abs(conv_ypos - y_pos_ant)*CONVERSION_FACTOR_Y;
 			}
 		}
 		else{
-			X -= abs(obj->x_pos - x_pos_ant)*CONVERSION_FACTOR_X;
-			if(obj->y_pos > y_pos_ant){
-				Y -= abs(obj->y_pos - y_pos_ant)*CONVERSION_FACTOR_Y;	
+			X -= abs(conv_xpos - x_pos_ant)*CONVERSION_FACTOR_X;
+			if(conv_ypos > y_pos_ant){
+				Y -= abs(conv_ypos - y_pos_ant)*CONVERSION_FACTOR_Y;	
 			}
 			else{
-				Y += abs(obj->y_pos - y_pos_ant)*CONVERSION_FACTOR_Y;
+				Y += abs(conv_ypos - y_pos_ant)*CONVERSION_FACTOR_Y;
 			}
 		}
 
 		/* compute the heading angle */
-		theta = 180 - 180*atan2(obj->x_pos_aux_mark - obj->x_pos, obj->y_pos_aux_mark - obj->y_pos)/CV_PI;	
+		theta = 180 - 180*atan2(obj->x_pos_aux_mark - conv_xpos, obj->y_pos_aux_mark - conv_ypos)/CV_PI;	
 		
 		/* clear problems when initializing, ensure 0 at startup */
 		if(init_fix == 0){
@@ -364,7 +375,7 @@ void present_data(){
         sprintf(obj->buffer, "%ld,%f,%f,%f\n", log_bin[trk->idx].timestamp, X, Y, theta);
 
 	/* update position in the GUI */
-	sprintf(pos_val, "DEBUG [ X: %f Y: %f   -     xc: %d yc: %d     -    theta %f]", X, Y, obj->x_pos, obj->y_pos, theta);
+	sprintf(pos_val, "DEBUG [ X: %f Y: %f|xc: %d yc: %d|xc_corr %d yc_corr %d|theta %f]", X, Y, obj->x_pos, obj->y_pos, conv_xpos, conv_ypos, theta);
 
 		cvPutText(frame_provider->image,				/* the image to write on */ 
 			  pos_val,  						/* the string to write */
@@ -373,23 +384,27 @@ void present_data(){
 			  cvScalar(255, 255, 255, 0)); 		 		/* line properties */
 
 #ifdef VERBOSE
+	static int old_mark_xpos = 0;
+	static int old_mark_ypos = 0;
 	/* superimpose the trace of the tracked object */
 	if(x_pos_ant_vis>0 && y_pos_ant_vis>0) {	
-		if(obj->x_pos>0 && obj->y_pos>0) {
+		if(conv_xpos>0 && conv_ypos>0) {
 			/* create a tracking line marker between 2 succesive points while target is moving (object trace) */
-			cvLine(trk->obj_pos_img, cvPoint(obj->x_pos, obj->y_pos), cvPoint(x_pos_ant_vis, y_pos_ant_vis), cvScalar(0,255,0,0.0), 3, 8, 0);
+			cvLine(trk->obj_pos_img, cvPoint(obj->x_pos, obj->y_pos), cvPoint(old_mark_xpos, old_mark_ypos), cvScalar(0,255,0,0.0), 3, 8, 0);
 		}
 	}
 
 	cvAdd(frame_provider->image, trk->obj_pos_img, frame_provider->image, NULL);
  
 	/* update history for visualization */
-	x_pos_ant_vis = obj->x_pos;
-	y_pos_ant_vis = obj->y_pos;
+	x_pos_ant_vis = conv_xpos;
+	y_pos_ant_vis = conv_ypos;
 #endif		
 	/* update history for tracking */
-	x_pos_ant = obj->x_pos;
-	y_pos_ant = obj->y_pos;
+	x_pos_ant = conv_xpos;
+	y_pos_ant = conv_ypos;
+	old_mark_xpos = obj->x_pos;
+	old_mark_ypos = obj->y_pos;
 	trk->idx++;
   }
 }

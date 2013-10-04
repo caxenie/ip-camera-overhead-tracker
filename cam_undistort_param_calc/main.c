@@ -5,8 +5,8 @@
 #include <gtk/gtk.h>
 #include <string.h>
 
-#define K1_MAX 0.0032
-#define K2_MAX 0.00015
+#define K1_MAX 0.0006
+#define K2_MAX 0.0003
 
 char* default_filename;
 
