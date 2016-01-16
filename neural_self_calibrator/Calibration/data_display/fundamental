@@ -1,0 +1,48 @@
+% fundamental matrix
+
+clear
+close all
+
+
+
+% Frame size
+FRAME_WIDTH = 780;
+FRAME_HEIGHT = 582;
+
+%Sensor size
+SENSOR_WIDTH = 5.371e-3;
+SENSOR_HEIGHT = 4.035e-3;
+
+% Element size
+sx = 8.3e-6;
+sy = 8.3e-6;
+
+% Focal length
+f = 5e-3;
+fx = f/sx;
+fy = f/sy;
+
+% Principal point
+cx = FRAME_WIDTH/2;
+cy = FRAME_HEIGHT/2;
+
+% Target distance
+d = 0.1562;
+
+% Camera matrix
+K = [fx, 0, cx 0;
+            0 fy cy 0;
+            0 0 1 0];
+            
+
+%% create extrinsic and intrinsic transformation matrices
+
+%% Right camera
+%Rotation
+alpha = 0.8567;
+%Translation
+tx = -3;
+ty = -3;
+tz = -2.6;
+
+Tr = Rotx(pi/2)*Rotz(pi)*transl(tx,ty,tz)*Rotx(-alpha);

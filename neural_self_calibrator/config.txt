@@ -1,0 +1,34 @@
+# cam_tracker configuration file 
+
+version = "1.0"
+
+
+cam_tracker:
+{
+	variables:
+	{		
+		# path to store image files
+		img_base_path = "../Data/recording/";
+
+
+		# Camera Config and IEEE1394 Settings 
+		bytes_per_packet = 2936;					// payload packet size for ieee 1394, influences fps
+		capture_source = "DISK";					// capture source, either REMOTE (cameras) or DISK (img files)
+		shutter = 100;								// shutter value
+		ub_value = 650 /*680*/;						// white value setting: green to blue value in [0,1022]
+		vr_value = 520 /*540*/;						// white value setting: green to red value in [0,1022]
+
+		# ordered marker colors
+		colors = ["RED","BLUE","GREEN"];			
+
+		
+		NUM_OF_CAMS = 8;
+		NUM_OF_MARKERS = 2;
+		NUM_OF_CAM_PAIRS = 2;
+		CAM_PAIRS = (1,3);
+
+		# Streaming Configuration 
+		SENDING_BUFFER_SIZE = 200;
+		PORT_NUM = 56000;
+	}
+}

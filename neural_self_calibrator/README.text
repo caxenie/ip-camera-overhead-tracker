@@ -1,0 +1,194 @@
+Neural Self-Calibrating Robot Tracking System
+=============================================
+
+Developers:
+Felix Ebert felix.ebert@gmx.de
+Cristian Axenie cristian.axenie@tum.de
+
+
+3D tracking application and calibration for indoor operation. 
+In use are in total 8 cameras of which four are color cameras and 4 are grayscale cameras.
+Tracking for the color cameras is based on finding bright colored dots in the image (LEDs) and measuring the color difference with respect to a desired color.
+By exploiting the epipolar geometry, the epipolar lines for the markers found in the color image are computed for the grayscale image.
+The markers are then classified by computing the distance of the blobs in the grayscale image to the epipolar lines.
+Calibration is done by training a neural network based on relative calibration data.
+For this a calibration device with two distinct LEDs is needed with a fixed distance between the LEDs.
+
+The software runs on the vision PC in the robot lab and uses the Guppy Firewire cams mounted on the wall.
+Furthermore data can be recorded to disk and tracking can be performed on this stored data.
+So far calibration and tracking works for 2 cameras (stereo), the camera pair to be used is hardcoded in the source.
+Therefore to change this, alter the code and rebuild the software.
+ 
+The project consists of different sub folders: 
+
++ src: C/C++ source files of the tracking algorithm
++ logs: image pixel coordinates of markers for each cam are saved to this folder
++ Calibration: C/C++ and Matlab/GNU Octave source for neural calibration
+
+
+
+
+Prerequisites/Dependencies
+--------------------------
+
++ Linux
++ build-essential
++ OpenCV (2.4.4)
++ DC1394 API (2.2.1)
++ FANN (2.2.0)
+
+
+
+
+Build / Compile
+---------------
+
+Tracking application:
+
+  In the base folder type
+	
+	make all
+
+  or
+  	make debug
+
+  to compile debug version of tracker or 
+
+	make release
+
+  for the release version.
+
+
+
+Calibration:
+
+  In the Calibration subfolder type
+	
+	make all
+		
+  to build the applications necessary for calibration.
+
+
+
+To clean up type
+	
+	make clean
+
+in the respective folders.
+
+
+
+
+
+Run the tracking software
+-------------------------
+
+Within the base folder a central configuration file config.txt can be found. All the neccessary parameters can be set within this file without the need to recompile.
+
+The general hierachy of parameter settings is: 
+	default values -> config.txt -> command line parameters
+where config settings are overwritten from left to right, i.e. default values are overwritten by the configuration file and command line parameters stand highest within the hierachy.
+
+Type 
+
+	./cam_track -h 
+
+to receive all possible command line options.
+
+
+
+Parameters are set to typical values, such that 3D tracking should work without any options set.
+Nevertheless it can be necessary to change for example the shutter setting. 
+A typical call may be 
+	
+	./cam_track -s <shutter time> -v
+
+where -v activates graphical output, i.e. the frames are shown on the screen. 
+Then the application can be stopped by pressing 'q'. 
+Without graphical output the application can be stopped by Ctrl-C. 
+
+The OpenCV routines for graphical output seem to produce errors when called from any other thread than the main thread.
+At some occasions the graphical output und hence the tracking software itself does not start.
+Thus it is recommended to start the software without the -v (verbosity) switch.
+
+If tracking is not stable, first check that the battery is not drained, i.e. the LEDs are bright enough.
+Then try to change the shutter time setting.
+If tracker has difficulties distinguishing between the blue and green LEDs change the white value setting.
+Furthermore, make sure that no camera, especially one of the grayscale cameras, is capturing a window during daylight since this acts as another light source, prohibiting the tracker from stable operation.
+
+The tracking result is streamed over TCP/IP to a connected remote client.
+Currently a timestamp in milliseconds, the Cartesian world coordinates of the markers 
+and the RPY angles (orientation) when 3 markers are activated, separated by white space, are send out:
+
+	TS {X_Mi Y_Mi Z_Mi} <ALPHA BETA GAMMA>
+
+where i = 1 ... N (N: number of markers) and the RPY angles are only streamed, when N = 3.
+
+The origin of the world coordinate system is set to the inital position of the red LED.
+
+You can test the streaming app for example by using netcat or telnet to access the streaming server
+
+	nc <ip_addr> <port>
+	telnet <ip_addr> <port>
+
+where ip_addr is 10.162.242.82 and the port is 56000.
+
+
+
+Calibration
+-----------
+
+Calibration in general consists of three main steps.
+First compute fundamental matrix for each camera pair.
+Next, train neural network for stereo calbration for each camera.
+Finally, compute absolute orientation to relate all camera pairs to one common reference coordinate frame.
+
+All calibration data is recorded with the main application, only the settings in the config.txt file have to be adpated.
+You can wc -l <file> the log files to see how many data points have been recorded.
+
+Procedure:
+
+	1.) record calib data for fundamental matrix computation (1 camera pair, 1 marker)
+	2.) ./train_fundamental <log_cam1> <log_cam2>
+	3.) record calib data for stereo calibration
+	4.) ./neural_calib <log_cam1> <log_cam2>
+	5.) repeat 1.) to 4.) for all camera pairs
+	6.) record calib for absolute orientation computation (2 camera pairs, 1 marker)
+	7.) compute trafo matrix 
+	8.) repeat 6.) & 7.) for all camera pairs except the reference pair (which obviously has the identity as the trafo matrix)
+
+
+First, data defining the epipolar geometry needs to be recorded. Therefore, for each camera pair at a time the motion of one marker is recorded.
+Set sizes in the range of a few thousand sample points are recommended.
+The resulting image pixel coordinates are store to files <> <> and are submitted to the train_fundamental routine.
+The resulting fundamental matrix is stored in <> and should be copied to CalibData/<fundamental_i.txt> where i is the number of the current camera pair.
+
+Having the fundamental matrix computed, more than one marker can be tracked withing the grayscale images.
+Then training data needs to be recorded. Move the calibration device consisting of two LEDs (marker) with fixed distance in front of the cameras. 
+The resulting image pixel coordinates are stored in <> <>.
+It is recommended to record at least around 15000 sample points, better more.
+Then run the neural_calib application in the Calibration/ subdirectory and give the paths to 
+the log files as command line parameters
+
+	./neural_calib <path to 1st log file> <path to 2nd log file>
+
+When the training has finished, a file called "cam_tracker.net" is created in which the resulting network is stored, which also have to be copied to the CalibData/ directory as cam_pair_i.net, where i denotes the id of the current cam pair.
+When the calibration device is replaced, change the TARGET_DISTANCE define statement in the global.h source with the
+new distance between the LEDs and rebuild.
+
+Then the transformation matrices between the camera pairs and a common reference frame are computed.
+Please note, that the fields of view of the current camera pair and the reference camera pair must overlap in order to record corresponding point sets. Otherwise, the transformation matrix between the current frame and one other camera pair, for which the transformation matrix is already computed, has to be computed. The final transformation matrix is then the compound of the individual transformations. 
+To record the data, set the two camera pairs in question in the config file. Set the CALIBRATION define in the main.cpp file, recompile and run the application. Corresponding data points will be recorded as long both stereo pairs are simultaneously tracking the marker.
+Then run the octave script <> to compute the transformation matrix. The resulting file has to be copied to CalibData/T_ji.txt where the notation is from cam pair j to reference cam pair i.
+
+
+Finally the rotation matrix for network output orientation correction is created by first running the get_vector_coordinates 
+routine and then running the Matlab/GNU Octave script back_trafo_matrix.m.
+Align the calibration device along the world coordinate vectors, i.e. create step by step a righthanded coordinate system.
+Everytime the calibration device is aligned with one cosy direction hit the 's' key to store the rotated vector entries.
+The vector created by the calibration device points from the red LED to the blue LED.
+To get for example the x direction vector, align the direction of the vector pointing from the red to the blue LED with 
+the x axis of the world coordinate system and press 's'.  
+Once all three vectors are stored quit this helper function and run the back_trafo_matrix script which creates the rotation matrix.
+	 
+	
